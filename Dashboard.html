@@ -5,259 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de Bord</title>
 <style>
-    /* === STYLE DE BASE (THÈME SOMBRE RÉGULIER) === */
-    :root {
-        --bg-color: #121212;
-        --card-bg: #1e1e1e;
-        --text-color: #ffffff;
-        --title-color: #4da6ff;
-        --border-color: #333333;
-        --th-bg: #2a2a2a;
-        --stat-bg: #252525;
-        --font-family: sans-serif;
-        --box-shadow: none;
-        --text-shadow: none;
-        --input-bg: #2a2a2a;
-        --button-bg: #333333;
-    }
+ /* === VARIABLES ET THÈMES === */
+:root {
+    --bg-color: #121212; --card-bg: #1e1e1e; --text-color: #fff;
+    --title-color: #4da6ff; --border-color: #333; --th-bg: #2a2a2a;
+    --stat-bg: #252525; --font-family: sans-serif; --box-shadow: none;
+    --text-shadow: none; --input-bg: #2a2a2a; --button-bg: #333;
+}
 
-    /* === STYLE PIP-BOY (ACTIVÉ VIA LA CLASSE .pipboy SUR <body>) === */
-    body.pipboy {
-        --bg-color: #020d04;
-        --card-bg: #051a08;
-        --text-color: #1ff042;
-        --title-color: #1ff042;
-        --border-color: #1ff042;
-        --th-bg: #0a2e0e;
-        --stat-bg: #0c3811;
-        --font-family: 'Courier New', Courier, monospace;
-        --box-shadow: 0 0 10px rgba(31, 240, 66, 0.2);
-        --text-shadow: 0 0 5px rgba(31, 240, 66, 0.7);
-        --input-bg: #051a08;
-        --button-bg: #0a2e0e;
-    }
+body.pipboy {
+    --bg-color: #020d04; --card-bg: #051a08; --text-color: #1ff042;
+    --title-color: #1ff042; --border-color: #1ff042; --th-bg: #0a2e0e;
+    --stat-bg: #0c3811; --font-family: 'Courier New', monospace;
+    --box-shadow: 0 0 10px #1ff04233; --text-shadow: 0 0 5px #1ff042b3;
+    --input-bg: #051a08; --button-bg: #0a2e0e;
+}
 
-    /* Effet CRT Lignes de balayage pour Pip-Boy */
-    body.pipboy::before {
-        content: " ";
-        display: block;
-        position: fixed;
-        top: 0; left: 0; bottom: 0; right: 0;
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-        z-index: 100;
-        background-size: 100% 3px, 6px 100%;
-        pointer-events: none;
-    }
+/* Effet CRT Pip-Boy */
+body.pipboy::before {
+    content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none;
+    background: linear-gradient(#12101000 50%, #00000040 50%), linear-gradient(90deg, #ff000008, #00ff0003, #0000ff08);
+    background-size: 100% 3px, 6px 100%;
+}
 
-    body { 
-        font-family: var(--font-family); 
-        background-color: var(--bg-color); 
-        color: var(--text-color); 
-        padding: 15px; 
-        text-shadow: var(--text-shadow);
-        transition: all 0.3s ease;
-        overflow-x: hidden; /* Empêche le scroll horizontal indésirable */
-    }
+/* === STRUCTURE BASE === */
+body { 
+    font-family: var(--font-family); background-color: var(--bg-color); 
+    color: var(--text-color); padding: 8px; text-shadow: var(--text-shadow);
+    transition: all 0.3s ease; overflow-x: hidden;
+}
 
-    .card { 
-        background-color: var(--card-bg); 
-        padding: 15px; 
-        border-radius: 8px; 
-        margin-bottom: 15px; 
-        border: 1px solid var(--border-color);
-        box-shadow: var(--box-shadow);
-    }
+.card { 
+    background-color: var(--card-bg); padding: 10px; border-radius: 6px; 
+    margin-bottom: 10px; border: 1px solid var(--border-color); box-shadow: var(--box-shadow);
+}
 
-    h2 { margin-top: 0; color: var(--title-color); font-size: 1.2rem; text-shadow: var(--text-shadow); }
-    .data { font-size: 1.5rem; font-weight: bold; }
-    ul { padding-left: 20px; margin-bottom: 0; }
-    li { font-size: 1.1rem; margin-bottom: 5px; }
+h2 { margin: 0 0 6px 0; color: var(--title-color); font-size: 1.1rem; text-shadow: var(--text-shadow); }
+.data { font-size: 1.3rem; font-weight: bold; }
+ul { padding-left: 16px; margin: 0; }
+li { font-size: 0.95rem; margin-bottom: 3px; }
 
-    /* === BOUTON SWITCH (HAUT À DROITE) === */
-    .toggle-container {
-        position: fixed;
-        top: 15px;
-        right: 15px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        padding: 6px 12px;
-        border-radius: 20px;
-        z-index: 101;
-        box-shadow: var(--box-shadow);
-    }
-    .toggle-label { font-size: 0.8rem; font-weight: bold; color: var(--text-color); }
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 40px;
-        height: 20px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-        background-color: #555; transition: .4s; border-radius: 20px;
-    }
-    .slider:before {
-        position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-        background-color: white; transition: .4s; border-radius: 50%;
-    }
-    input:checked + .slider { background-color: #1ff042; }
-    input:checked + .slider:before { transform: translateX(20px); background-color: #020d04; }
+/* === BOUTON SWITCH === */
+.toggle-container {
+    position: fixed; top: 8px; right: 8px; display: flex; align-items: center;
+    gap: 6px; background: var(--card-bg); border: 1px solid var(--border-color);
+    padding: 4px 8px; border-radius: 16px; z-index: 101; box-shadow: var(--box-shadow);
+}
+.toggle-label { font-size: 0.75rem; font-weight: bold; color: var(--text-color); }
+.switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #555; transition: .4s; border-radius: 18px; }
+.slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: #fff; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #1ff042; }
+input:checked + .slider:before { transform: translateX(16px); background-color: #020d04; }
 
-    /* === CHAMP VILLE, BOUTON GPS & HEURE LOCALE === */
-    .city-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 8px;
-    }
-    .city-input {
-        background-color: var(--input-bg);
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-family: var(--font-family);
-        font-size: 1rem;
-        outline: none;
-    }
-    .btn-gps {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: filter 0.2s;
-    }
-    .btn-gps:hover {
-        filter: brightness(1.3);
-    }
-    .weather-display {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    .city-time {
-        font-size: 1.1rem;
-        color: var(--title-color);
-        font-weight: normal;
-    }
+/* === ENTÊTE VILLE & GPS === */
+.city-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.city-input, .btn-gps {
+    background-color: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);
+    padding: 4px 6px; border-radius: 4px; font-family: var(--font-family); font-size: 0.9rem;
+}
+.city-input { outline: none; flex: 1; min-width: 120px; }
+.btn-gps { background-color: var(--button-bg); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: filter 0.2s; }
+.btn-gps:hover { filter: brightness(1.3); }
 
-    /* === STYLE PRÉVISIONS MÉTÉO === */
-    .forecast-container {
-        display: flex;
-        overflow-x: auto;
-        gap: 10px;
-        margin-top: 12px;
-        padding-bottom: 5px;
-    }
-    .forecast-item {
-        flex: 0 0 auto;
-        background: var(--th-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        padding: 8px;
-        text-align: center;
-        min-width: 65px;
-    }
-    .forecast-time { font-size: 0.75rem; color: #888; }
-    body.pipboy .forecast-time { color: var(--text-color); }
-    .forecast-temp { font-size: 0.95rem; font-weight: bold; margin: 3px 0; }
-    .forecast-pop { font-size: 0.7rem; color: var(--title-color); }
+.weather-display { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.city-time { font-size: 0.95rem; color: var(--title-color); font-weight: normal; }
 
-    /* === TABLEAU BASEBALL === */
-    .linescore-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.85rem;
-        margin-top: 8px;
-        margin-bottom: 12px;
-        text-align: center;
-    }
-    .linescore-table th, .linescore-table td {
-        border: 1px solid var(--border-color);
-        padding: 6px 4px;
-        position: relative;
-    }
-    .linescore-table th {
-        background-color: var(--th-bg);
-        color: var(--text-color);
-        font-weight: normal;
-    }
-    .linescore-table td.team-name {
-        text-align: left;
-        padding-left: 6px;
-        font-weight: bold;
-        color: var(--text-color);
-        max-width: 90px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .linescore-table td.stat-col, .linescore-table th.stat-col {
-        background-color: var(--stat-bg);
-        font-weight: bold;
-        color: var(--title-color);
-    }
+/* === PRÉVISIONS MÉTÉO === */
+.forecast-container { display: flex; overflow-x: auto; gap: 6px; margin-top: 8px; padding-bottom: 4px; }
+.forecast-item { flex: 0 0 auto; background: var(--th-bg); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; text-align: center; min-width: 55px; }
+.forecast-time { font-size: 0.7rem; color: #888; }
+body.pipboy .forecast-time { color: var(--text-color); }
+.forecast-temp { font-size: 0.85rem; font-weight: bold; margin: 2px 0; }
+.forecast-pop { font-size: 0.65rem; color: var(--title-color); }
 
-    /* Hover & Tooltip CSS */
-    .linescore-table td.has-details:hover, .linescore-table td.stat-col:hover {
-        filter: brightness(1.3);
-        cursor: pointer;
-    }
-    .linescore-table td .tooltip {
-        visibility: hidden;
-        min-width: 220px;
-        max-width: 350px;
-        width: max-content;
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        text-align: left;
-        border-radius: 6px;
-        padding: 8px;
-        position: absolute;
-        z-index: 10;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        opacity: 0;
-        transition: opacity 0.2s;
-        box-shadow: var(--box-shadow);
-        border: 1px solid var(--border-color);
-        font-size: 0.75rem;
-        pointer-events: none;
-        white-space: normal;
-        word-break: break-word;
-        font-weight: normal;
-    }
+/* === TABLEAU BASEBALL === */
+.linescore-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin: 6px 0 8px 0; text-align: center; }
+.linescore-table th, .linescore-table td { border: 1px solid var(--border-color); padding: 4px 2px; position: relative; }
+.linescore-table th { background-color: var(--th-bg); color: var(--text-color); font-weight: normal; }
+.linescore-table td.team-name { text-align: left; padding-left: 4px; font-weight: bold; color: var(--text-color); max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.linescore-table .stat-col { background-color: var(--stat-bg); font-weight: bold; color: var(--title-color); }
 
-    /* Alignement spécifique des bords pour empêcher le scroll horizontal */
-    .linescore-table td:first-child .tooltip {
-        left: 0;
-        transform: none;
-    }
-
-    .linescore-table td:nth-last-child(-n+3) .tooltip {
-        left: auto;
-        right: 0;
-        transform: none;
-    }
-
-    .linescore-table td:hover .tooltip {
-        visibility: visible;
-        opacity: 1;
-    }
+/* Tooltips */
+.linescore-table td.has-details:hover, .linescore-table td.stat-col:hover { filter: brightness(1.3); cursor: pointer; }
+.linescore-table td .tooltip {
+    visibility: hidden; min-width: 180px; max-width: 260px; width: max-content;
+    background-color: var(--card-bg); color: var(--text-color); text-align: left;
+    border-radius: 4px; padding: 6px; position: absolute; z-index: 10; bottom: 115%;
+    left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s;
+    box-shadow: var(--box-shadow); border: 1px solid var(--border-color);
+    font-size: 0.7rem; pointer-events: none; white-space: normal; word-break: break-word; font-weight: normal;
+}
+.linescore-table td:first-child .tooltip { left: 0; transform: none; }
+.linescore-table td:nth-last-child(-n+3) .tooltip { left: auto; right: 0; transform: none; }
+.linescore-table td:hover .tooltip { visibility: visible; opacity: 1; }
 </style>
 </head>
 <body>
