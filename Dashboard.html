@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord</title>
+<style>
+    /* === STYLE DE BASE (THÈME SOMBRE RÉGULIER) === */
+    :root {
+        --bg-color: #121212;
+        --card-bg: #1e1e1e;
+        --text-color: #ffffff;
+        --title-color: #4da6ff;
+        --border-color: #333333;
+        --th-bg: #2a2a2a;
+        --stat-bg: #252525;
+        --font-family: sans-serif;
+        --box-shadow: none;
+        --text-shadow: none;
+        --input-bg: #2a2a2a;
+        --button-bg: #333333;
+    }
+
+    /* === STYLE PIP-BOY (ACTIVÉ VIA LA CLASSE .pipboy SUR <body>) === */
+    body.pipboy {
+        --bg-color: #020d04;
+        --card-bg: #051a08;
+        --text-color: #1ff042;
+        --title-color: #1ff042;
+        --border-color: #1ff042;
+        --th-bg: #0a2e0e;
+        --stat-bg: #0c3811;
+        --font-family: 'Courier New', Courier, monospace;
+        --box-shadow: 0 0 10px rgba(31, 240, 66, 0.2);
+        --text-shadow: 0 0 5px rgba(31, 240, 66, 0.7);
+        --input-bg: #051a08;
+        --button-bg: #0a2e0e;
+    }
+
+    /* Effet CRT Lignes de balayage pour Pip-Boy */
+    body.pipboy::before {
+        content: " ";
+        display: block;
+        position: fixed;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+        z-index: 100;
+        background-size: 100% 3px, 6px 100%;
+        pointer-events: none;
+    }
+
+    body { 
+        font-family: var(--font-family); 
+        background-color: var(--bg-color); 
+        color: var(--text-color); 
+        padding: 15px; 
+        text-shadow: var(--text-shadow);
+        transition: all 0.3s ease;
+        overflow-x: hidden; /* Empêche le scroll horizontal indésirable */
+    }
+
+    .card { 
+        background-color: var(--card-bg); 
+        padding: 15px; 
+        border-radius: 8px; 
+        margin-bottom: 15px; 
+        border: 1px solid var(--border-color);
+        box-shadow: var(--box-shadow);
+    }
+
+    h2 { margin-top: 0; color: var(--title-color); font-size: 1.2rem; text-shadow: var(--text-shadow); }
+    .data { font-size: 1.5rem; font-weight: bold; }
+    ul { padding-left: 20px; margin-bottom: 0; }
+    li { font-size: 1.1rem; margin-bottom: 5px; }
+
+    /* === BOUTON SWITCH (HAUT À DROITE) === */
+    .toggle-container {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        padding: 6px 12px;
+        border-radius: 20px;
+        z-index: 101;
+        box-shadow: var(--box-shadow);
+    }
+    .toggle-label { font-size: 0.8rem; font-weight: bold; color: var(--text-color); }
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #555; transition: .4s; border-radius: 20px;
+    }
+    .slider:before {
+        position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+        background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #1ff042; }
+    input:checked + .slider:before { transform: translateX(20px); background-color: #020d04; }
+
+    /* === CHAMP VILLE, BOUTON GPS & HEURE LOCALE === */
+    .city-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    .city-input {
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: var(--font-family);
+        font-size: 1rem;
+        outline: none;
+    }
+    .btn-gps {
+        background-color: var(--button-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: filter 0.2s;
+    }
+    .btn-gps:hover {
+        filter: brightness(1.3);
+    }
+    .weather-display {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .city-time {
+        font-size: 1.1rem;
+        color: var(--title-color);
+        font-weight: normal;
+    }
+
+    /* === STYLE PRÉVISIONS MÉTÉO === */
+    .forecast-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 10px;
+        margin-top: 12px;
+        padding-bottom: 5px;
+    }
+    .forecast-item {
+        flex: 0 0 auto;
+        background: var(--th-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px;
+        text-align: center;
+        min-width: 65px;
+    }
+    .forecast-time { font-size: 0.75rem; color: #888; }
+    body.pipboy .forecast-time { color: var(--text-color); }
+    .forecast-temp { font-size: 0.95rem; font-weight: bold; margin: 3px 0; }
+    .forecast-pop { font-size: 0.7rem; color: var(--title-color); }
+
+    /* === TABLEAU BASEBALL === */
+    .linescore-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        margin-top: 8px;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+    .linescore-table th, .linescore-table td {
+        border: 1px solid var(--border-color);
+        padding: 6px 4px;
+        position: relative;
+    }
+    .linescore-table th {
+        background-color: var(--th-bg);
+        color: var(--text-color);
+        font-weight: normal;
+    }
+    .linescore-table td.team-name {
+        text-align: left;
+        padding-left: 6px;
+        font-weight: bold;
+        color: var(--text-color);
+        max-width: 90px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .linescore-table td.stat-col, .linescore-table th.stat-col {
+        background-color: var(--stat-bg);
+        font-weight: bold;
+        color: var(--title-color);
+    }
+
+    /* Hover & Tooltip CSS */
+    .linescore-table td.has-details:hover, .linescore-table td.stat-col:hover {
+        filter: brightness(1.3);
+        cursor: pointer;
+    }
+    .linescore-table td .tooltip {
+        visibility: hidden;
+        min-width: 220px;
+        max-width: 350px;
+        width: max-content;
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        text-align: left;
+        border-radius: 6px;
+        padding: 8px;
+        position: absolute;
+        z-index: 10;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: var(--box-shadow);
+        border: 1px solid var(--border-color);
+        font-size: 0.75rem;
+        pointer-events: none;
+        white-space: normal;
+        word-break: break-word;
+        font-weight: normal;
+    }
+
+    /* Alignement spécifique des bords pour empêcher le scroll horizontal */
+    .linescore-table td:first-child .tooltip {
+        left: 0;
+        transform: none;
+    }
+
+    .linescore-table td:nth-last-child(-n+3) .tooltip {
+        left: auto;
+        right: 0;
+        transform: none;
+    }
+
+    .linescore-table td:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+</style>
+</head>
+<body>
+
+    <div class="toggle-container">
+        <span class="toggle-label">PIP-BOY</span>
+        <label class="switch">
+            <input type="checkbox" id="chkPipboy" onchange="toggleTheme(this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="card">
+        <h2>🕒 Heure locale</h2>
+        <div id="divHeure" class="data">Chargement...</div>
+    </div>
+
+    <div class="card">
+        <div class="city-header">
+            <h2>🌤️ Météo :</h2>
+            <input type="text" id="txtVille" class="city-input" value="Napierville" onchange="rechercherVille(this.value)">
+            <button class="btn-gps" onclick="obtenirGeolocalisation()" title="Utiliser ma position GPS">📍</button>
+        </div>
+        <div class="weather-display">
+            <div id="divMeteo" class="data">Chargement...</div>
+            <div id="divHeureVille" class="city-time"></div>
+        </div>
+        <div id="divPrevisions" class="forecast-container"></div>
+    </div>
+<div class="card">
+    <div class="city-header">
+        <h2>⚾ MLB :</h2>
+        <select id="selEquipeMlb" class="city-input" onchange="fetchBlueJays(this.value)">
+            <option value="109">Arizona Diamondbacks</option>
+            <option value="144">Atlanta Braves</option>
+            <option value="110">Baltimore Orioles</option>
+            <option value="111">Boston Red Sox</option>
+            <option value="112">Chicago Cubs</option>
+            <option value="145">Chicago White Sox</option>
+            <option value="113">Cincinnati Reds</option>
+            <option value="114">Cleveland Guardians</option>
+            <option value="115">Colorado Rockies</option>
+            <option value="116">Detroit Tigers</option>
+            <option value="117">Houston Astros</option>
+            <option value="118">Kansas City Royals</option>
+            <option value="108">Los Angeles Angels</option>
+            <option value="119">Los Angeles Dodgers</option>
+            <option value="146">Miami Marlins</option>
+            <option value="158">Milwaukee Brewers</option>
+            <option value="142">Minnesota Twins</option>
+            <option value="121">New York Mets</option>
+            <option value="147">New York Yankees</option>
+            <option value="133">Oakland Athletics</option>
+            <option value="143">Philadelphia Phillies</option>
+            <option value="134">Pittsburgh Pirates</option>
+            <option value="135">San Diego Padres</option>
+            <option value="137">San Francisco Giants</option>
+            <option value="136">Seattle Mariners</option>
+            <option value="138">St. Louis Cardinals</option>
+            <option value="139">Tampa Bay Rays</option>
+            <option value="140">Texas Rangers</option>
+            <option value="141" selected>Toronto Blue Jays</option>
+            <option value="120">Washington Nationals</option>
+        </select>
+    </div>
+    <div id="divJays">Chargement...</div>
+</div>
+
+<div class="card">
+    <h2>🎮Sorties jeux vidéo</h2>
+    <div style="margin-bottom: 12px;">
+        <label for="inputMois" style="font-size: 0.9rem;">Choisir le mois : </label>
+        <input type="month" id="inputMois" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+    </div>
+    <div id="divMonthlyGames">Chargement des sorties...</div>
+</div>
+
+    <script>
+        // Variables globales pour le fuseau horaire de la ville
+        let vTimezoneVille = "America/Toronto";
+
+        // --- GESTION DU THÈME (PIP-BOY / DÉFAUT) ---
+        function toggleTheme(pIsPipboy) {
+            if (pIsPipboy) {
+                document.body.classList.add('pipboy');
+                localStorage.setItem('theme', 'pipboy');
+            } else {
+                document.body.classList.remove('pipboy');
+                localStorage.setItem('theme', 'default');
+            }
+        }
+
+        // Chargement du thème sauvegardé
+        const vThemeSauvegarde = localStorage.getItem('theme');
+        if (vThemeSauvegarde === 'pipboy') {
+            document.getElementById('chkPipboy').checked = true;
+            toggleTheme(true);
+        }
+
+        // 1. Horloge globale + Horloge de la ville
+        function updateHeures() {
+            const vDate = new Date();
+            document.getElementById('divHeure').innerText = vDate.toLocaleTimeString('fr-CA');
+
+            if (vTimezoneVille) {
+                try {
+                    const vHeureVilleStr = vDate.toLocaleTimeString('fr-CA', { timeZone: vTimezoneVille, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    document.getElementById('divHeureVille').innerText = `🕒 ${vHeureVilleStr}`;
+                } catch (e) {
+                    document.getElementById('divHeureVille').innerText = "";
+                }
+            }
+        }
+        setInterval(updateHeures, 1000);
+        updateHeures();
+
+        // Helper pour convertir le code météo WMO en symbole
+        function getIconeMeteo(pCode) {
+            if (pCode === 0) return "☀️";
+            if (pCode >= 1 && pCode <= 3) return "⛅";
+            if (pCode >= 45 && pCode <= 48) return "🌫️";
+            if (pCode >= 51 && pCode <= 67) return "🌧️";
+            if (pCode >= 71 && pCode <= 77) return "❄️";
+            if (pCode >= 80 && pCode <= 82) return "🌦️";
+            if (pCode >= 95) return "🌩️";
+            return "🌡️";
+        }
+
+        // 2. Géocodage, Géolocalisation GPS et Météo
+        function obtenirGeolocalisation() {
+            if (navigator.geolocation) {
+                document.getElementById('divMeteo').innerText = "Localisation...";
+                navigator.geolocation.getCurrentPosition(async (pPosition) => {
+                    const vLat = pPosition.coords.latitude;
+                    const vLon = pPosition.coords.longitude;
+
+                    try {
+                        const vUrlRev = `https://nominatim.openstreetmap.org/reverse?lat=${vLat}&lon=${vLon}&format=json`;
+                        const vResRev = await fetch(vUrlRev);
+                        const vDataRev = await vResRev.json();
+
+                        let vNomVille = "Ma position";
+                        if (vDataRev && vDataRev.address) {
+                            vNomVille = vDataRev.address.village || vDataRev.address.town || vDataRev.address.city || vDataRev.address.municipality || "Ma position";
+                        }
+
+                        document.getElementById('txtVille').value = vNomVille;
+                        vTimezoneVille = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Toronto";
+                        fetchMeteo(vLat, vLon, vTimezoneVille);
+
+                    } catch (vErreur) {
+                        vTimezoneVille = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Toronto";
+                        fetchMeteo(vLat, vLon, vTimezoneVille);
+                    }
+                }, (vErreur) => {
+                    alert("Impossible d'obtenir la position GPS.");
+                    document.getElementById('divMeteo').innerText = "Erreur GPS";
+                });
+            } else {
+                alert("La géolocalisation n'est pas supportée par votre navigateur.");
+            }
+        }
+
+        async function rechercherVille(pNomVille) {
+            if (!pNomVille.trim()) return;
+            try {
+                const vUrlGeo = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(pNomVille)}&count=1&language=fr&format=json`;
+                const vResGeo = await fetch(vUrlGeo);
+                const vDataGeo = await vResGeo.json();
+
+                if (vDataGeo.results && vDataGeo.results.length > 0) {
+                    const vVille = vDataGeo.results[0];
+                    vTimezoneVille = vVille.timezone || "America/Toronto";
+                    fetchMeteo(vVille.latitude, vVille.longitude, vTimezoneVille);
+                } else {
+                    document.getElementById('divMeteo').innerText = "Ville non trouvée";
+                    document.getElementById('divPrevisions').innerHTML = "";
+                    document.getElementById('divHeureVille').innerText = "";
+                }
+            } catch (vErreur) {
+                document.getElementById('divMeteo').innerText = "Erreur de recherche";
+            }
+        }
+
+        async function fetchMeteo(pLat, pLon, pTimezone) {
+            try {
+                const vUrl = `https://api.open-meteo.com/v1/forecast?latitude=${pLat}&longitude=${pLon}&current_weather=true&hourly=temperature_2m,precipitation_probability,weathercode&timezone=${encodeURIComponent(pTimezone)}`;
+                const vResponse = await fetch(vUrl);
+                const vData = await vResponse.json();
+                
+                // Température actuelle
+                const vTempActuelle = Math.round(vData.current_weather.temperature);
+                const vIconeActuelle = getIconeMeteo(vData.current_weather.weathercode);
+                document.getElementById('divMeteo').innerText = `${vIconeActuelle} ${vTempActuelle} °C`;
+
+                // Prévisions 12 prochaines heures
+                const vHeures = vData.hourly.time;
+                const vTemps = vData.hourly.temperature_2m;
+                const vPops = vData.hourly.precipitation_probability;
+                const vCodes = vData.hourly.weathercode;
+
+                const vHeureLocaleVille = new Date().toLocaleTimeString('en-CA', { timeZone: pTimezone, hour12: false, hour: '2-digit' });
+                const vJourLocalVille = new Date().toLocaleDateString('en-CA', { timeZone: pTimezone });
+                const vPrefixeIso = `${vJourLocalVille}T${vHeureLocaleVille.padStart(2, '0')}`;
+
+                let vIndexDepart = vHeures.findIndex(h => h.startsWith(vPrefixeIso));
+                if (vIndexDepart === -1) vIndexDepart = 0;
+
+                let vHtmlPrev = "";
+                for (let i = vIndexDepart; i < vIndexDepart + 12 && i < vHeures.length; i++) {
+                    const vHeureAffichage = vHeures[i].substring(11, 13) + "h";
+                    const vTempH = Math.round(vTemps[i]);
+                    const vPopH = vPops[i] ?? 0;
+                    const vIconeH = getIconeMeteo(vCodes[i]);
+
+                    vHtmlPrev += `
+                        <div class="forecast-item">
+                            <div class="forecast-time">${vHeureAffichage}</div>
+                            <div>${vIconeH}</div>
+                            <div class="forecast-temp">${vTempH}°C</div>
+                            <div class="forecast-pop">💧 ${vPopH}%</div>
+                        </div>`;
+                }
+                document.getElementById('divPrevisions').innerHTML = vHtmlPrev;
+                updateHeures();
+
+            } catch (vErreur) {
+                document.getElementById('divMeteo').innerText = "Erreur de connexion";
+            }
+        }
+
+        // Chargement initial pour Napierville
+        rechercherVille("Napierville");
+
+        async function fetchDetailsParManche(pGamePk) {
+    let vDataMatch = {
+        manches: {},
+        totaux: {
+            away: { hits: {}, points: {}, erreurs: {} },
+            home: { hits: {}, points: {}, erreurs: {} }
+        }
+    };
+
+    try {
+        const vUrl = `https://statsapi.mlb.com/api/v1/game/${pGamePk}/playByPlay`;
+        const vResponse = await fetch(vUrl);
+        const vData = await vResponse.json();
+
+        if (vData.allPlays) {
+            vData.allPlays.forEach(pPlay => {
+                const vManche = pPlay.about.inning;
+                const vCote = pPlay.about.halfInning;
+                const vCle = `${vManche}_${vCote}`;
+                const vEquipe = vCote === "top" ? "away" : "home";
+                const vEquipeAdverse = vCote === "top" ? "home" : "away";
+
+                if (!vDataMatch.manches[vCle]) {
+                    vDataMatch.manches[vCle] = { hits: [], points: [] };
+                }
+
+                // Coups sûrs
+                if (pPlay.result && pPlay.result.eventType && 
+                   ['single', 'double', 'triple', 'home_run'].includes(pPlay.result.eventType)) {
+                    const vFrappeur = pPlay.matchup.batter.fullName;
+                    vDataMatch.manches[vCle].hits.push({ frappeur: vFrappeur, type: pPlay.result.event });
+                    vDataMatch.totaux[vEquipe].hits[vFrappeur] = (vDataMatch.totaux[vEquipe].hits[vFrappeur] || 0) + 1;
+                }
+
+                // Points produits
+                if (pPlay.result && pPlay.result.rbi && pPlay.result.rbi > 0) {
+                    const vFrappeur = pPlay.matchup.batter.fullName;
+                    vDataMatch.manches[vCle].points.push({ frappeur: vFrappeur, rbi: pPlay.result.rbi });
+                    vDataMatch.totaux[vEquipe].points[vFrappeur] = (vDataMatch.totaux[vEquipe].points[vFrappeur] || 0) + pPlay.result.rbi;
+                }
+
+                // --- CAPTURE DES ERREURS MULTI-SOURCES ---
+                let vNomsErreurs = [];
+
+                // 1. Crédits globaux de la séquence
+                if (pPlay.credits) {
+                    pPlay.credits.forEach(pCredit => {
+                        if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
+                            vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                        }
+                    });
+                }
+
+                // 2. Événements de lancer/relais (playEvents)
+                if (pPlay.playEvents) {
+                    pPlay.playEvents.forEach(pEvt => {
+                        if (pEvt.credits) {
+                            pEvt.credits.forEach(pCredit => {
+                                if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
+                                    vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // 3. Analyse des coureurs (erreurs sur feintes, mauvais relais, etc.)
+                if (pPlay.runners) {
+                    pPlay.runners.forEach(pRunner => {
+                        if (pRunner.details) {
+                            if (pRunner.details.isError) {
+                                const vNom = pRunner.details.responsibleFielder ? pRunner.details.responsibleFielder.fullName : "Erreur collective";
+                                vNomsErreurs.push(vNom);
+                            }
+                            if (pRunner.details.credits) {
+                                pRunner.details.credits.forEach(pCredit => {
+                                    if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
+                                        vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // 4. Recours au texte de description si l'erreur n'a pas été attribuée à un joueur précis
+                if (vNomsErreurs.length === 0 && pPlay.result && pPlay.result.description && pPlay.result.description.toLowerCase().includes('error')) {
+                    const vDesc = pPlay.result.description;
+                    const vMatch = vDesc.match(/error by ([a-zA-Z\s.-]+?)(?=\.|\,|$|\sallows|\son|\sto)/i);
+                    vNomsErreurs.push(vMatch ? vMatch[1].trim() : "Erreur collective");
+                }
+
+                // Enregistrement des erreurs attribuées à l'équipe en défense
+                vNomsErreurs.forEach(vJoueur => {
+                    vDataMatch.totaux[vEquipeAdverse].erreurs[vJoueur] = (vDataMatch.totaux[vEquipeAdverse].erreurs[vJoueur] || 0) + 1;
+                });
+            });
+        }
+    } catch (vErreur) {
+        console.error("Erreur chargement détails match", vErreur);
+    }
+    return vDataMatch;
+}
+
+        // Génération du tableau indicateur
+        function construireTableauIndicateur(pMatch, pDetails) {
+            const vLinescore = pMatch.linescore;
+            if (!vLinescore || !vLinescore.innings) {
+                return `<div>${pMatch.teams.away.team.name} (${pMatch.teams.away.score}) @ ${pMatch.teams.home.team.name} (${pMatch.teams.home.score})</div>`;
+            }
+
+            const vInnings = vLinescore.innings;
+            const vNbManches = Math.max(9, vInnings.length);
+
+            let vHtml = `<table class="linescore-table"><thead><tr><th>Équipe</th>`;
+            for (let i = 1; i <= vNbManches; i++) {
+                vHtml += `<th>${i}</th>`;
+            }
+            vHtml += `<th class="stat-col">R</th><th class="stat-col">H</th><th class="stat-col">E</th></tr></thead><tbody>`;
+
+            function genererTooltipManche(pCle) {
+                const vInfo = pDetails.manches[pCle];
+                if (!vInfo || (vInfo.hits.length === 0 && vInfo.points.length === 0)) {
+                    return `<span class="tooltip">Aucun coup sûr ni point</span>`;
+                }
+
+                let vTexte = `<span class="tooltip">`;
+                if (vInfo.hits.length > 0) {
+                    vTexte += `<strong>Coups sûrs:</strong><br>`;
+                    vInfo.hits.forEach(h => { vTexte += `• ${h.frappeur} (${h.type})<br>`; });
+                }
+                if (vInfo.points.length > 0) {
+                    if (vInfo.hits.length > 0) vTexte += `<br>`;
+                    vTexte += `<strong>Points produits:</strong><br>`;
+                    vInfo.points.forEach(p => { vTexte += `• ${p.frappeur} (${p.rbi} PP)<br>`; });
+                }
+                vTexte += `</span>`;
+                return vTexte;
+            }
+
+function genererTooltipTotal(pEquipe, pType) {
+    const vObj = pDetails.totaux[pEquipe][pType];
+    const vNoms = Object.keys(vObj);
+    
+    if (vNoms.length === 0) {
+        const vMessageVide = pType === "erreurs" ? "Aucune erreur" : "Aucune donnée";
+        return `<span class="tooltip">${vMessageVide}</span>`;
+    }
+
+    let vTitre = pType === "hits" ? "Coups sûrs" : (pType === "points" ? "Points produits" : "Erreurs");
+    let vTexte = `<span class="tooltip"><strong>${vTitre}:</strong><br>`;
+    vNoms.forEach(pNom => { vTexte += `• ${pNom} : ${vObj[pNom]}<br>`; });
+    vTexte += `</span>`;
+    return vTexte;
+}
+
+            // Ligne Visiteurs
+            const vAwayTeam = pMatch.teams.away;
+            vHtml += `<tr><td class="team-name">${vAwayTeam.team.name}</td>`;
+            for (let i = 0; i < vNbManches; i++) {
+                const vRuns = vInnings[i] && vInnings[i].away && vInnings[i].away.runs !== undefined ? vInnings[i].away.runs : "-";
+                vHtml += `<td class="has-details">${vRuns}${genererTooltipManche(`${i + 1}_top`)}</td>`;
+            }
+            vHtml += `<td class="stat-col">${vLinescore.teams.away.runs ?? 0}${genererTooltipTotal("away", "points")}</td>`;
+            vHtml += `<td class="stat-col">${vLinescore.teams.away.hits ?? 0}${genererTooltipTotal("away", "hits")}</td>`;
+            vHtml += `<td class="stat-col">${vLinescore.teams.away.errors ?? 0}${genererTooltipTotal("away", "erreurs")}</td></tr>`;
+
+            // Ligne Domicile
+            const vHomeTeam = pMatch.teams.home;
+            vHtml += `<tr><td class="team-name">${vHomeTeam.team.name}</td>`;
+            for (let i = 0; i < vNbManches; i++) {
+                const vRuns = vInnings[i] && vInnings[i].home && vInnings[i].home.runs !== undefined ? vInnings[i].home.runs : "-";
+                vHtml += `<td class="has-details">${vRuns}${genererTooltipManche(`${i + 1}_bottom`)}</td>`;
+            }
+            vHtml += `<td class="stat-col">${vLinescore.teams.home.runs ?? 0}${genererTooltipTotal("home", "points")}</td>`;
+            vHtml += `<td class="stat-col">${vLinescore.teams.home.hits ?? 0}${genererTooltipTotal("home", "hits")}</td>`;
+            vHtml += `<td class="stat-col">${vLinescore.teams.home.errors ?? 0}${genererTooltipTotal("home", "erreurs")}</td></tr>`;
+
+            vHtml += `</tbody></table>`;
+            return vHtml;
+        }
+
+// 3. Suivi MLB
+let vTimerMlb = null;
+
+async function fetchBlueJays(pTeamId) {
+    if (vTimerMlb) {
+        clearInterval(vTimerMlb);
+    }
+
+    const vRafraichir = async () => {
+        let vMatchEnDirect = null;
+
+        try {
+            const vAujourdhui = new Date();
+            const vDebut = new Date(vAujourdhui);
+            vDebut.setDate(vAujourdhui.getDate() - 10);
+            const vFin = new Date(vAujourdhui);
+            vFin.setDate(vAujourdhui.getDate() + 10);
+
+            // sv-SE formate en YYYY-MM-DD selon le fuseau horaire local
+            const vStrDebut = vDebut.toLocaleDateString('sv-SE');
+            const vStrFin = vFin.toLocaleDateString('sv-SE');
+
+            const vUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${pTeamId}&startDate=${vStrDebut}&endDate=${vStrFin}&hydrate=linescore`;
+            const vResponse = await fetch(vUrl);
+            const vData = await vResponse.json();
+
+            if (vData.dates && vData.dates.length > 0) {
+                let vTousLesMatchs = [];
+                vData.dates.forEach(pDate => {
+                    pDate.games.forEach(pJeu => vTousLesMatchs.push(pJeu));
+                });
+
+                vMatchEnDirect = vTousLesMatchs.find(pJeu => pJeu.status.abstractGameState === "Live");
+                const vMatchsTermines = vTousLesMatchs.filter(pJeu => pJeu.status.abstractGameState === "Final");
+                const vProchainsMatchs = vTousLesMatchs.filter(pJeu => pJeu.status.abstractGameState === "Preview");
+
+                let vHtml = "";
+
+                // Match en direct
+                if (vMatchEnDirect) {
+                    const vDetailsDirect = await fetchDetailsParManche(vMatchEnDirect.gamePk);
+                    vHtml += `<div style="color: #ff4444; font-weight: bold; margin-bottom: 5px;">🔴 EN DIRECT</div>`;
+                    if (vMatchEnDirect.linescore && vMatchEnDirect.linescore.currentInning) {
+                        const vEtatManche = vMatchEnDirect.linescore.inningState || (vMatchEnDirect.linescore.isTopInning ? "Haut" : "Bas") || "";
+                        vHtml += `<small style="color: #aaa;">Manche : ${vEtatManche} ${vMatchEnDirect.linescore.currentInning}</small>`;
+                    }
+                    vHtml += construireTableauIndicateur(vMatchEnDirect, vDetailsDirect);
+                }
+
+                // Dernier match terminé
+                if (vMatchsTermines.length > 0) {
+                    const vDernier = vMatchsTermines[vMatchsTermines.length - 1];
+                    const vDetailsDernier = await fetchDetailsParManche(vDernier.gamePk);
+                    vHtml += `<div style="font-size: 0.9rem; color: #888;">Dernier match :</div>`;
+                    vHtml += construireTableauIndicateur(vDernier, vDetailsDernier);
+                }
+
+                // Prochain match
+                if (vProchainsMatchs.length > 0) {
+                    const vProchain = vProchainsMatchs[0];
+                    const vDateHeure = new Date(vProchain.gameDate);
+                    const vHeureLocale = vDateHeure.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+                    const vJourLocal = vDateHeure.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+
+                    vHtml += `<div style="font-size: 0.9rem; color: #888; margin-top: 10px;">Prochain match :</div>`;
+                    vHtml += `<div style="font-weight: bold; margin-top: 3px;">${vProchain.teams.away.team.name} @ ${vProchain.teams.home.team.name}</div>`;
+                    vHtml += `<small style="color: var(--title-color);">${vJourLocal} à ${vHeureLocale}</small>`;
+                }
+
+                const vHeureMaj = new Date().toLocaleTimeString('fr-CA');
+                vHtml += `<div style="font-size: 0.75rem; color: #777; margin-top: 10px; text-align: right;">Dernière MàJ : ${vHeureMaj}</div>`;
+                document.getElementById('divJays').innerHTML = vHtml || "Aucun match trouvé.";
+            } else {
+                document.getElementById('divJays').innerText = "Aucun match au calendrier récent.";
+            }
+
+            // Ajustement dynamique du délai : 30s en direct, 5 min sinon
+            const vDelai = vMatchEnDirect ? 30000 : 300000;
+            if (vTimerMlb) clearInterval(vTimerMlb);
+            vTimerMlb = setInterval(vRafraichir, vDelai);
+
+        } catch (vErreur) {
+            console.error("Erreur MLB:", vErreur);
+            document.getElementById('divJays').innerText = "Erreur de chargement des données MLB";
+            if (vTimerMlb) clearInterval(vTimerMlb);
+            vTimerMlb = setInterval(vRafraichir, 60000); // 1 min en cas d'erreur réseau
+        }
+    };
+
+    await vRafraichir();
+}
+
+// Lancement initial
+fetchBlueJays(141);
+
+const vApiKey = 'eee5e318da824cb0a4bee394e6cf3a39';
+
+async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
+    const vContainer = document.getElementById('divMonthlyGames');
+
+    if (!pApiKey || pApiKey === 'VOTRE_CLE_API') {
+        vContainer.innerText = "Clé API manquante.";
+        return;
+    }
+
+    const vMaintenant = new Date();
+    const vAnnee = pAnnee || vMaintenant.getFullYear();
+    const vMois = pMois ? String(pMois).padStart(2, '0') : String(vMaintenant.getMonth() + 1).padStart(2, '0');
+
+    // Calcul du dernier jour du mois sélectionné
+    const vDernierJour = new Date(vAnnee, parseInt(vMois, 10), 0).getDate();
+
+    const vDateDebut = `${vAnnee}-${vMois}-01`;
+    const vDateFin = `${vAnnee}-${vMois}-${vDernierJour}`;
+
+    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10`;
+
+    vContainer.innerText = "Chargement des sorties...";
+
+    try {
+        const vResponse = await fetch(vUrl);
+        if (!vResponse.ok) {
+            throw new Error(`Erreur HTTP ${vResponse.status}`);
+        }
+
+        const vData = await vResponse.json();
+
+        if (!vData.results || vData.results.length === 0) {
+            vContainer.innerText = "Aucune sortie majeure trouvée pour ce mois.";
+            return;
+        }
+
+        let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
+
+        vData.results.forEach(pJeu => {
+            const vDateSortie = pJeu.released || "Date inconnue";
+            const vPlateformes = pJeu.platforms 
+                ? pJeu.platforms.map(pP => pP.platform.name).join(', ') 
+                : 'N/A';
+
+            vHtml += `<li style="margin-bottom: 8px;">
+                <strong>${pJeu.name}</strong> 
+                <span style="font-size: 0.85rem; opacity: 0.8;">(${vPlateformes})</span>
+                <br>
+                <small style="color: var(--title-color);">Sortie : ${vDateSortie}</small>
+            </li>`;
+        });
+
+        vHtml += '</ul>';
+        vContainer.innerHTML = vHtml;
+    } catch (vErreur) {
+        vContainer.innerText = `Impossible de charger les sorties (${vErreur.message}).`;
+        console.error(vErreur);
+    }
+}
+
+// Initialisation automatique
+document.addEventListener('DOMContentLoaded', () => {
+    const vInputMois = document.getElementById('inputMois');
+    const vMaintenant = new Date();
+    
+    const vAnneeCourante = vMaintenant.getFullYear();
+    const vMoisCourant = String(vMaintenant.getMonth() + 1).padStart(2, '0');
+    
+    if (vInputMois) {
+        // Définir la valeur initiale sur le mois courant (AAAA-MM)
+        vInputMois.value = `${vAnneeCourante}-${vMoisCourant}`;
+
+        // Recharger lors d'un changement de valeur
+        vInputMois.addEventListener('change', (pEvent) => {
+            if (pEvent.target.value) {
+                const [vAnnee, vMois] = pEvent.target.value.split('-');
+                chargerSortiesMoisAuto(vApiKey, vAnnee, vMois);
+            }
+        });
+    }
+
+    // Premier appel avec le mois courant
+    chargerSortiesMoisAuto(vApiKey, vAnneeCourante, vMoisCourant);
+});
+    </script>
+</body>
+</html>
