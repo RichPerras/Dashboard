@@ -730,9 +730,10 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
             const vPlateformes = pJeu.platforms 
                 ? pJeu.platforms.map(pP => pP.platform.name).join(', ') 
                 : 'N/A';
+            const vGameUrl = pJeu.slug ? `https://rawg.io/games/${pJeu.slug}` : '#';
 
             vHtml += `<li style="margin-bottom: 8px;">
-                <strong>${pJeu.name}</strong> 
+                <strong><a href="${vGameUrl}" target="_blank" style="color: inherit; text-decoration: underline;">${pJeu.name}</a></strong> 
                 <span style="font-size: 0.85rem; opacity: 0.8;">(${vPlateformes})</span>
                 <br>
                 <small style="color: var(--title-color);">${t('release')} ${vDateSortie}</small>
