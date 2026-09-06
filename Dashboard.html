@@ -206,18 +206,33 @@ body.pipboy .forecast-time { color: var(--text-color); }
     </div>
     <div id="divJays">Chargement...</div>
 </div>
-
+<!-- Modal de détails -->
+<div id="modalMedia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: var(--card-bg, #fff); color: var(--text-color, #000); padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; text-align: center; position: relative;">
+        <button onclick="fermerModalMedia()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit;">✖</button>
+        <h3 id="modalMediaTitre" style="margin-top: 0;"></h3>
+        <p id="modalMediaOverview" style="font-size: 0.9rem; text-align: left; max-height: 150px; overflow-y: auto; margin: 15px 0;"></p>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a id="btnOuvrirPlateforme" href="#" target="_blank" style="padding: 10px; background-color: #007bff; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;">Rechercher sur la plateforme</a>
+            <button onclick="copierTitreMedia()" style="padding: 8px; background: transparent; border: 1px solid #ccc; color: inherit; border-radius: 4px; cursor: pointer;">📋 Copier le titre</button>
+        </div>
+    </div>
+</div>
 <div class="card">
     <div class="city-header" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">
         <h2 id="titleMedia" data-i18n="gameReleases">🎮 Sorties jeux vidéo</h2>
         <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto;">
             <button id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">Jeux</button>
-            <button id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinema</button>
+            <button id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinéma</button>
+            <button id="btnMediaNetflix" class="btn-level" onclick="changerMedia('Netflix')">Netflix</button>
+            <button id="btnMediaDisney" class="btn-level" onclick="changerMedia('Disney')">Disney+</button>
+            <button id="btnMediaCrave" class="btn-level" onclick="changerMedia('Crave')">Crave</button>
         </div>
     </div>
-    <div style="margin-bottom: 12px;">
+    <div id="divMoisContainer" style="margin-bottom: 12px;">
         <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
-        <input type="month" id="inputMois" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--input-bg); color: var(--text-color); border-color: var(--border-color);">
+        <input type="month" id="inputMois" onchange="rechargerMedia()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--input-bg); color: var(--text-color); border-color: var(--border-color);">
     </div>
     <div id="divMonthlyGames">Chargement des sorties...</div>
 </div>
@@ -930,19 +945,37 @@ initialiserMlb();
 const vApiKey = 'eee5e318da824cb0a4bee394e6cf3a39';
 let vPageJeux = 1;
 let vCurrentMediaType = 'Games';
+let vAllMovies = [];
+let vCurrentPage = 1;
+const vItemsPerPage = 10;
 
 async function changerMedia(pType) {
     vCurrentMediaType = pType;
-    
-    // Update buttons
-    document.querySelectorAll('.btn-level').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(pType === 'Games' ? 'btnMediaGames' : 'btnMediaCinema').classList.add('active');
-    
-    // Update title
-    document.getElementById('titleMedia').innerText = pType === 'Games' ? t('gameReleases') : t('cinemaReleases');
-    
-    // Reload
-    rechargerMedia();
+
+    // Mise à jour de l'état actif des boutons
+    document.querySelectorAll('.btn-level').forEach(vBtn => vBtn.classList.remove('active'));
+    const vActiveBtn = document.getElementById(`btnMedia${pType}`);
+    if (vActiveBtn) vActiveBtn.classList.add('active');
+
+    // Mise à jour des titres (Nouveautés -> Tendances pour le streaming)
+    const vTitleEl = document.getElementById('titleMedia');
+    if (pType === 'Games') vTitleEl.innerText = t('gameReleases');
+    else if (pType === 'Cinema') vTitleEl.innerText = t('cinemaReleases');
+    else if (pType === 'Netflix') vTitleEl.innerText = '🍿 Tendances Netflix';
+    else if (pType === 'Disney') vTitleEl.innerText = '✨ Tendances Disney+';
+    else if (pType === 'Crave') vTitleEl.innerText = '📺 Tendances Crave';
+
+    // Gestion de la visibilité du sélecteur de mois
+    const vMoisContainer = document.getElementById('divMoisContainer');
+    if (vMoisContainer) {
+        if (['Netflix', 'Disney', 'Crave'].includes(pType)) {
+            vMoisContainer.style.display = 'none';
+        } else {
+            vMoisContainer.style.display = 'block';
+        }
+    }
+
+    await rechargerMedia();
 }
 
 async function rechargerMedia() {
@@ -950,17 +983,130 @@ async function rechargerMedia() {
     if (!vInputMois || !vInputMois.value) return;
     
     const [vAnnee, vMois] = vInputMois.value.split('-');
-    
+    vCurrentPage = 1;
+
     if (vCurrentMediaType === 'Games') {
         await chargerSortiesJeux(vApiKey, vAnnee, vMois, 1);
-    } else {
+    } else if (vCurrentMediaType === 'Cinema') {
+        // Le cinéma en salle gère parfaitement le filtre par mois
         await chargerSortiesCinema(vAnnee, vMois);
+    } else if (vCurrentMediaType === 'Netflix') {
+        vAllMovies = await chargerTendancesStreaming(8);
+        afficherPageCourante();
+    } else if (vCurrentMediaType === 'Disney') {
+        vAllMovies = await chargerTendancesStreaming(337);
+        afficherPageCourante();
+    } else if (vCurrentMediaType === 'Crave') {
+        vAllMovies = await chargerTendancesStreaming(230);
+        afficherPageCourante();
+    }
+}
+let vTitreSelectionne = '';
+
+function ouvrirModalMedia(pTitre, pOverview, pProviderId) {
+    vTitreSelectionne = pTitre;
+    
+    document.getElementById('modalMediaTitre').innerText = pTitre;
+    document.getElementById('modalMediaOverview').innerText = pOverview || 'Aucun résumé disponible.';
+    
+    const vBtnOuvrir = document.getElementById('btnOuvrirPlateforme');
+    vBtnOuvrir.href = genererUrlStreamingOptimisee(pProviderId, pTitre);
+    
+    document.getElementById('modalMedia').style.display = 'flex';
+}
+
+function fermerModalMedia() {
+    document.getElementById('modalMedia').style.display = 'none';
+}
+
+function copierTitreMedia() {
+    if (!vTitreSelectionne) return;
+    navigator.clipboard.writeText(vTitreSelectionne);
+    alert(`Titre copié : "${vTitreSelectionne}"`);
+}
+
+function genererUrlStreamingOptimisee(pProviderId, pTitre) {
+    const vTitreEncode = encodeURIComponent(pTitre);
+    const vIsMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (pProviderId === 8) {
+        // Netflix : Ouvre l'application directement si mobile, sinon le site Web
+        return vIsMobile ? `netflix://search?q=${vTitreEncode}` : `https://www.netflix.com/search?q=${vTitreEncode}`;
+    } else if (pProviderId === 337) {
+        // Disney+ : Ouvre l'application mobile ou recherche ciblée sur le Web
+        return vIsMobile ? `disneyplus://` : `https://www.google.com/search?q=${vTitreEncode}+site:disneyplus.com`;
+    } else if (pProviderId === 230) {
+        // Crave : Lien universel (ouvre l'app si installée, sinon le site)
+        return `https://www.crave.ca/fr/search?q=${vTitreEncode}`;
+    }
+    return '#';
+}
+function genererUrlStreaming(pProviderId, pTitre) {
+    const vTitreEncode = encodeURIComponent(pTitre);
+    const vIsMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (pProviderId === 8) {
+        // Netflix : Ouvre directement la recherche dans l'application sur mobile
+        return vIsMobile 
+            ? `netflix://search?q=${vTitreEncode}` 
+            : `https://www.netflix.com/search?q=${vTitreEncode}`;
+    } 
+    
+    if (pProviderId === 337) {
+        // Disney+ : Le schéma disneyplus:// ouvre l'application mobile (la recherche directe par URL n'est pas supportée par leur app)
+        return vIsMobile 
+            ? `disneyplus://` 
+            : `https://www.google.com/search?q=${vTitreEncode}+site:disneyplus.com`;
+    } 
+    
+    if (pProviderId === 230) {
+        // Crave : Le lien HTTPS standard est configuré en "Universal Link" et ouvre automatiquement l'application iOS/Android si elle est installée
+        return `https://www.crave.ca/fr/search?q=${vTitreEncode}`;
+    }
+    
+    return '#';
+}
+
+async function chargerTendancesStreaming(pProviderId) {
+    const vContainer = document.getElementById('divMonthlyGames');
+    vContainer.innerText = t('loading');
+    
+    try {
+        const vApiKey = '140ea31987a6d13873f398d3bdf8c383';
+        const vUrlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${vApiKey}&watch_region=CA&with_watch_providers=${pProviderId}&language=fr-CA&sort_by=popularity.desc`;
+        const vUrlTV = `https://api.themoviedb.org/3/discover/tv?api_key=${vApiKey}&watch_region=CA&with_watch_providers=${pProviderId}&language=fr-CA&sort_by=popularity.desc`;
+
+        const [vResMovies, vResTV] = await Promise.all([
+            fetch(vUrlMovies),
+            fetch(vUrlTV)
+        ]);
+
+        const vDataMovies = vResMovies.ok ? await vResMovies.json() : { results: [] };
+        const vDataTV = vResTV.ok ? await vResTV.json() : { results: [] };
+
+        const vFilms = (vDataMovies.results || []).map(vItem => ({
+            title: `🎬 ${vItem.title}`,
+            rawTitle: vItem.title,
+            overview: vItem.overview,
+            providerId: pProviderId
+        }));
+
+        const vSeries = (vDataTV.results || []).map(vItem => ({
+            title: `📺 ${vItem.name}`,
+            rawTitle: vItem.name,
+            overview: vItem.overview,
+            providerId: pProviderId
+        }));
+
+        return [...vFilms, ...vSeries];
+
+    } catch (vError) {
+        console.error(vError);
+        vContainer.innerText = `${t('releasesError')}: ${vError.message}`;
+        return [];
     }
 }
 
-let vAllMovies = [];
-let vCurrentPage = 1;
-const vItemsPerPage = 10;
 
 async function chargerSortiesCinema(pAnnee, pMois) {
     const vContainer = document.getElementById('divMonthlyGames');
@@ -1007,17 +1153,36 @@ async function chargerSortiesCinema(pAnnee, pMois) {
 
 function afficherPageCourante() {
     const vContainer = document.getElementById('divMonthlyGames');
+    
+    if (!vAllMovies || vAllMovies.length === 0) {
+        vContainer.innerText = t('noReleases');
+        return;
+    }
+    
     const vStartIndex = (vCurrentPage - 1) * vItemsPerPage;
     const vEndIndex = vStartIndex + vItemsPerPage;
     const vPaginatedMovies = vAllMovies.slice(vStartIndex, vEndIndex);
     const vTotalPages = Math.ceil(vAllMovies.length / vItemsPerPage);
     
     let vHtml = '<ul style="padding-left: 15px; margin: 0 0 10px 0;">';
+    
     vPaginatedMovies.forEach(vMovie => {
-        vHtml += `<li style="margin-bottom: 8px;">
-            <a href="${vMovie.url}" target="_blank" style="color: var(--title-color); text-decoration: underline;">${vMovie.title}</a>
-        </li>`;
+        let vLienHtml = '';
+
+        // Si l'élément provient du streaming (possède un providerId), on ouvre la modal
+        if (vMovie.providerId) {
+            const vTitreEchappe = (vMovie.rawTitle || vMovie.title).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const vOverviewEchappe = (vMovie.overview || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            vLienHtml = `<a href="#" onclick="event.preventDefault(); ouvrirModalMedia('${vTitreEchappe}', '${vOverviewEchappe}', ${vMovie.providerId})" style="color: var(--title-color); text-decoration: underline; cursor: pointer;">${vMovie.title}</a>`;
+        } else {
+            // Sinon (Jeux / Cinéma), lien direct externe dans un nouvel onglet
+            vLienHtml = `<a href="${vMovie.url}" target="_blank" style="color: var(--title-color); text-decoration: underline;">${vMovie.title}</a>`;
+        }
+
+        vHtml += `<li style="margin-bottom: 8px;">${vLienHtml}</li>`;
     });
+    
     vHtml += '</ul>';
     
     vHtml += `<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.9em;">
@@ -1148,6 +1313,119 @@ document.addEventListener('DOMContentLoaded', () => {
     // Premier appel avec le mois courant
     chargerSortiesJeux(vApiKey, vAnneeCourante, vMoisCourant, 1);
 });
+
+// Les identifiants TMDB pour les fournisseurs : Netflix (8), Disney+ (337), Crave (230)
+async function chargerNouveautesStreaming(pProviderId, pAnnee, pMois) {
+    const vContainer = document.getElementById('divMonthlyGames');
+    vContainer.innerText = t('loading');
+    
+    try {
+        const vApiKey = '140ea31987a6d13873f398d3bdf8c383';
+        
+        // Plage de dates pour le mois sélectionné
+        const vMoisFormate = String(pMois).padStart(2, '0');
+        const vDernierJour = new Date(pAnnee, pMois, 0).getDate();
+        const vDateDebut = `${pAnnee}-${vMoisFormate}-01`;
+        const vDateFin = `${pAnnee}-${vMoisFormate}-${vDernierJour}`;
+
+        // 1. Requête pour les FILMS sortis récemment sur la plateforme
+        const vUrlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${vApiKey}&watch_region=CA&with_watch_providers=${pProviderId}&language=fr-CA&primary_release_date.gte=${vDateDebut}&primary_release_date.lte=${vDateFin}&sort_by=primary_release_date.desc`;
+
+        // 2. Requête pour les SÉRIES sorties récemment sur la plateforme
+        const vUrlTV = `https://api.themoviedb.org/3/discover/tv?api_key=${vApiKey}&watch_region=CA&with_watch_providers=${pProviderId}&language=fr-CA&first_air_date.gte=${vDateDebut}&first_air_date.lte=${vDateFin}&sort_by=first_air_date.desc`;
+
+        const [vResMovies, vResTV] = await Promise.all([
+            fetch(vUrlMovies),
+            fetch(vUrlTV)
+        ]);
+
+        const vDataMovies = vResMovies.ok ? await vResMovies.json() : { results: [] };
+        const vDataTV = vResTV.ok ? await vResTV.json() : { results: [] };
+
+        // Normalisation des résultats (Films + Séries)
+        const vFilms = (vDataMovies.results || []).map(vItem => ({
+            title: `🎬 ${vItem.title}`,
+            url: `https://www.themoviedb.org/movie/${vItem.id}`
+        }));
+
+        const vSeries = (vDataTV.results || []).map(vItem => ({
+            title: `📺 ${vItem.name}`,
+            url: `https://www.themoviedb.org/tv/${vItem.id}`
+        }));
+
+        // Fusion des deux listes
+        return [...vFilms, ...vSeries];
+
+    } catch (vError) {
+        console.error(vError);
+        vContainer.innerText = `${t('releasesError')}: ${vError.message}`;
+        return [];
+    }
+}
+
+async function chargerSortiesTMDB(pType, pProviderId, pAnnee, pMois) {
+    const vApiKey = '140ea31987a6d13873f398d3bdf8c383';
+    const vMoisFormate = String(pMois).padStart(2, '0');
+    const vDernierJour = new Date(pAnnee, pMois, 0).getDate();
+    const vDateDebut = `${pAnnee}-${vMoisFormate}-01`;
+    const vDateFin = `${pAnnee}-${vMoisFormate}-${vDernierJour}`;
+    
+    let vUrl = '';
+    
+    if (pType === 'Cinema') {
+        // Films qui sortent en salle au Canada pendant le mois sélectionné
+        vUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${vApiKey}&region=CA&language=fr-CA&primary_release_date.gte=${vDateDebut}&primary_release_date.lte=${vDateFin}&sort_by=primary_release_date.asc`;
+    } else {
+        // Nouveautés / Titres populaires disponibles sur la plateforme au Canada
+        vUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${vApiKey}&watch_region=CA&with_watch_providers=${pProviderId}&language=fr-CA&sort_by=popularity.desc`;
+    }
+
+    const vResponse = await fetch(vUrl);
+    if (!vResponse.ok) throw new Error('Erreur de connexion à TMDB');
+    
+    const vData = await vResponse.json();
+    
+    return vData.results.map(vMovie => ({
+        title: vMovie.title,
+        url: `https://www.themoviedb.org/movie/${vMovie.id}`
+    }));
+}
+async function chargerNouveautesStreamingRSS(pProvider) {
+    const vContainer = document.getElementById('divMonthlyGames');
+    vContainer.innerText = t('loading');
+
+    // Dictionnaire des flux RSS spécialisés par plateforme
+    const vRssUrls = {
+        'Netflix': 'https://www.whats-on-netflix.com/feed/',
+        'Disney': 'https://whatsondisneyplus.com/feed/',
+        'Crave': 'https://www.cinoche.com/rss/nouvelles' // Flux d'actualités cinéma/streaming
+    };
+
+    const vTargetUrl = vRssUrls[pProvider];
+    if (!vTargetUrl) return [];
+
+    try {
+        // rss2json convertit le flux XML en JSON et règle le problème de CORS
+        const vApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(vTargetUrl)}`;
+        
+        const vResponse = await fetch(vApiUrl);
+        if (!vResponse.ok) throw new Error('Erreur de réseau lors de la récupération du flux');
+
+        const vData = await vResponse.json();
+        if (vData.status !== 'ok') throw new Error('Impossible de lire le flux RSS');
+
+        // Mappage des éléments RSS vers la structure du dashboard
+        return vData.items.map(vItem => ({
+            title: vItem.title,
+            url: vItem.link
+        }));
+
+    } catch (vError) {
+        console.error(vError);
+        vContainer.innerText = `${t('releasesError')}: ${vError.message}`;
+        return [];
+    }
+}
     </script>
 </body>
 </html>
