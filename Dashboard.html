@@ -52,6 +52,8 @@ li { font-size: 0.95rem; margin-bottom: 3px; }
     padding: 4px 8px; border-radius: 16px; z-index: 101; box-shadow: var(--box-shadow);
 }
 .toggle-label { font-size: 0.75rem; font-weight: bold; color: var(--text-color); }
+.language-toggle { top: 42px; }
+.language-toggle .toggle-label { min-width: 22px; text-align: center; }
 .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background-color: #555; transition: .4s; border-radius: 18px; }
@@ -112,16 +114,25 @@ body.pipboy .forecast-time { color: var(--text-color); }
         </label>
     </div>
 
+    <div class="toggle-container language-toggle">
+        <span class="toggle-label">FR</span>
+        <label class="switch">
+            <input type="checkbox" id="chkLangue" onchange="toggleLanguage(this.checked)">
+            <span class="slider"></span>
+        </label>
+        <span class="toggle-label">EN</span>
+    </div>
+
     <div class="card">
-        <h2>🕒 Heure locale</h2>
+        <h2 data-i18n="localTime">🕒 Heure locale</h2>
         <div id="divHeure" class="data">Chargement...</div>
     </div>
 
     <div class="card">
         <div class="city-header">
-            <h2>🌤️ Météo :</h2>
+            <h2 data-i18n="weather">🌤️ Météo :</h2>
             <input type="text" id="txtVille" class="city-input" value="Napierville" onchange="rechercherVille(this.value)">
-            <button class="btn-gps" onclick="obtenirGeolocalisation()" title="Utiliser ma position GPS">📍</button>
+            <button class="btn-gps" onclick="obtenirGeolocalisation()" data-i18n-title="gpsTitle" title="Utiliser ma position GPS">📍</button>
         </div>
         <div class="weather-display">
             <div id="divMeteo" class="data">Chargement...</div>
@@ -131,7 +142,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
     </div>
 <div class="card">
     <div class="city-header">
-        <h2>⚾ MLB1 :</h2>
+        <h2 data-i18n="mlb">⚾ MLB :</h2>
         <select id="selEquipeMlb" class="city-input" onchange="fetchBlueJays(this.value)">
             <option value="109">Arizona Diamondbacks</option>
             <option value="144">Atlanta Braves</option>
@@ -169,15 +180,79 @@ body.pipboy .forecast-time { color: var(--text-color); }
 </div>
 
 <div class="card">
-    <h2>🎮Sorties jeux vidéo</h2>
+    <h2 data-i18n="gameReleases">🎮 Sorties jeux vidéo</h2>
     <div style="margin-bottom: 12px;">
-        <label for="inputMois" style="font-size: 0.9rem;">Choisir le mois : </label>
+        <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
         <input type="month" id="inputMois" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
     </div>
     <div id="divMonthlyGames">Chargement des sorties...</div>
 </div>
 
     <script>
+        const vTraductions = {
+            fr: {
+                pageTitle: "Tableau de Bord", localTime: "🕒 Heure locale", weather: "🌤️ Météo :", mlb: "⚾ MLB:", gameReleases: "🎮 Sorties jeux vidéo",
+                chooseMonth: "Choisir le mois :", gpsTitle: "Utiliser ma position GPS", loading: "Chargement...",
+                locating: "Localisation...", myPosition: "Ma position", gpsError: "Erreur GPS",
+                gpsUnavailable: "La géolocalisation n'est pas supportée par votre navigateur.",
+                gpsFailed: "Impossible d'obtenir la position GPS.", cityNotFound: "Ville non trouvée",
+                searchError: "Erreur de recherche", connectionError: "Erreur de connexion", noHits: "Aucun coup sûr ni point",
+                hits: "Coups sûrs", runsBattedIn: "Points produits", errors: "Erreurs", noErrors: "Aucune erreur",
+                noData: "Aucune donnée", live: "EN DIRECT", inning: "Manche", lastGame: "Dernier match :",
+                nextGame: "Prochain match :", lastUpdate: "Dernière MàJ :", noGame: "Aucun match trouvé.",
+                noRecentGames: "Aucun match au calendrier récent.", mlbError: "Erreur de chargement des données MLB",
+                missingApiKey: "Clé API manquante.", loadingReleases: "Chargement des sorties...",
+                noReleases: "Aucune sortie majeure trouvée pour ce mois.", release: "Sortie :",
+                unknownDate: "Date inconnue", collectiveError: "Erreur collective", releasesError: "Impossible de charger les sorties"
+            },
+            en: {
+                pageTitle: "Dashboard", localTime: "🕒 Local time", weather: "🌤️ Weather:", mlb: "⚾ MLB:", gameReleases: "🎮 Video game releases",
+                chooseMonth: "Choose month: ", gpsTitle: "Use my GPS location", loading: "Loading...",
+                locating: "Locating...", myPosition: "My location", gpsError: "GPS error",
+                gpsUnavailable: "Geolocation is not supported by your browser.",
+                gpsFailed: "Unable to get your GPS location.", cityNotFound: "City not found",
+                searchError: "Search error", connectionError: "Connection error", noHits: "No hits or runs",
+                hits: "Hits", runsBattedIn: "Runs batted in", errors: "Errors", noErrors: "No errors",
+                noData: "No data", live: "LIVE", inning: "Inning", lastGame: "Last game:",
+                nextGame: "Next game:", lastUpdate: "Last update:", noGame: "No game found.",
+                noRecentGames: "No recent game on the schedule.", mlbError: "Error loading MLB data",
+                missingApiKey: "Missing API key.", loadingReleases: "Loading releases...",
+                noReleases: "No major releases found for this month.", release: "Release:",
+                unknownDate: "Unknown date", collectiveError: "Team error", releasesError: "Unable to load releases"
+            }
+        };
+        let vLangue = localStorage.getItem('language') || 'fr';
+        const t = pCle => vTraductions[vLangue][pCle] || pCle;
+        const vLocale = () => vLangue === 'en' ? 'en-CA' : 'fr-CA';
+
+        function appliquerTraductions() {
+            document.documentElement.lang = vLangue === 'en' ? 'en' : 'fr-CA';
+            document.title = t('pageTitle');
+            document.querySelectorAll('[data-i18n]').forEach(pElement => pElement.textContent = t(pElement.dataset.i18n));
+            document.querySelectorAll('[data-i18n-title]').forEach(pElement => pElement.title = t(pElement.dataset.i18nTitle));
+            document.getElementById('chkLangue').checked = vLangue === 'en';
+            document.getElementById('divHeure').innerText = t('loading');
+            document.getElementById('divMeteo').innerText = t('loading');
+            document.getElementById('divJays').innerText = t('loading');
+            document.getElementById('divMonthlyGames').innerText = t('loadingReleases');
+        }
+
+        function toggleLanguage(pIsEnglish) {
+            vLangue = pIsEnglish ? 'en' : 'fr';
+            localStorage.setItem('language', vLangue);
+            appliquerTraductions();
+            updateHeures();
+            rechercherVille(document.getElementById('txtVille').value);
+            fetchBlueJays(document.getElementById('selEquipeMlb').value);
+            const vMois = document.getElementById('inputMois').value;
+            if (vMois) {
+                const [vAnnee, vMoisChoisi] = vMois.split('-');
+                chargerSortiesMoisAuto(vApiKey, vAnnee, vMoisChoisi);
+            }
+        }
+
+        appliquerTraductions();
+
         // Variables globales pour le fuseau horaire de la ville
         let vTimezoneVille = "America/Toronto";
 
@@ -202,11 +277,11 @@ body.pipboy .forecast-time { color: var(--text-color); }
         // 1. Horloge globale + Horloge de la ville
         function updateHeures() {
             const vDate = new Date();
-            document.getElementById('divHeure').innerText = vDate.toLocaleTimeString('fr-CA');
+            document.getElementById('divHeure').innerText = vDate.toLocaleTimeString(vLocale());
 
             if (vTimezoneVille) {
                 try {
-                    const vHeureVilleStr = vDate.toLocaleTimeString('fr-CA', { timeZone: vTimezoneVille, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const vHeureVilleStr = vDate.toLocaleTimeString(vLocale(), { timeZone: vTimezoneVille, hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     document.getElementById('divHeureVille').innerText = `🕒 ${vHeureVilleStr}`;
                 } catch (e) {
                     document.getElementById('divHeureVille').innerText = "";
@@ -231,7 +306,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
         // 2. Géocodage, Géolocalisation GPS et Météo
         function obtenirGeolocalisation() {
             if (navigator.geolocation) {
-                document.getElementById('divMeteo').innerText = "Localisation...";
+                document.getElementById('divMeteo').innerText = t('locating');
                 navigator.geolocation.getCurrentPosition(async (pPosition) => {
                     const vLat = pPosition.coords.latitude;
                     const vLon = pPosition.coords.longitude;
@@ -241,9 +316,9 @@ body.pipboy .forecast-time { color: var(--text-color); }
                         const vResRev = await fetch(vUrlRev);
                         const vDataRev = await vResRev.json();
 
-                        let vNomVille = "Ma position";
+                        let vNomVille = t('myPosition');
                         if (vDataRev && vDataRev.address) {
-                            vNomVille = vDataRev.address.village || vDataRev.address.town || vDataRev.address.city || vDataRev.address.municipality || "Ma position";
+                            vNomVille = vDataRev.address.village || vDataRev.address.town || vDataRev.address.city || vDataRev.address.municipality || t('myPosition');
                         }
 
                         document.getElementById('txtVille').value = vNomVille;
@@ -255,18 +330,18 @@ body.pipboy .forecast-time { color: var(--text-color); }
                         fetchMeteo(vLat, vLon, vTimezoneVille);
                     }
                 }, (vErreur) => {
-                    alert("Impossible d'obtenir la position GPS.");
-                    document.getElementById('divMeteo').innerText = "Erreur GPS";
+                    alert(t('gpsFailed'));
+                    document.getElementById('divMeteo').innerText = t('gpsError');
                 });
             } else {
-                alert("La géolocalisation n'est pas supportée par votre navigateur.");
+                alert(t('gpsUnavailable'));
             }
         }
 
         async function rechercherVille(pNomVille) {
             if (!pNomVille.trim()) return;
             try {
-                const vUrlGeo = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(pNomVille)}&count=1&language=fr&format=json`;
+                const vUrlGeo = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(pNomVille)}&count=1&language=${vLangue}&format=json`;
                 const vResGeo = await fetch(vUrlGeo);
                 const vDataGeo = await vResGeo.json();
 
@@ -275,12 +350,12 @@ body.pipboy .forecast-time { color: var(--text-color); }
                     vTimezoneVille = vVille.timezone || "America/Toronto";
                     fetchMeteo(vVille.latitude, vVille.longitude, vTimezoneVille);
                 } else {
-                    document.getElementById('divMeteo').innerText = "Ville non trouvée";
+                    document.getElementById('divMeteo').innerText = t('cityNotFound');
                     document.getElementById('divPrevisions').innerHTML = "";
                     document.getElementById('divHeureVille').innerText = "";
                 }
             } catch (vErreur) {
-                document.getElementById('divMeteo').innerText = "Erreur de recherche";
+                document.getElementById('divMeteo').innerText = t('searchError');
             }
         }
 
@@ -327,7 +402,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 updateHeures();
 
             } catch (vErreur) {
-                document.getElementById('divMeteo').innerText = "Erreur de connexion";
+                document.getElementById('divMeteo').innerText = t('connectionError');
             }
         }
 
@@ -382,7 +457,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 if (pPlay.credits) {
                     pPlay.credits.forEach(pCredit => {
                         if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
-                            vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                            vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : t('collectiveError'));
                         }
                     });
                 }
@@ -393,7 +468,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
                         if (pEvt.credits) {
                             pEvt.credits.forEach(pCredit => {
                                 if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
-                                    vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                                    vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : t('collectiveError'));
                                 }
                             });
                         }
@@ -405,13 +480,13 @@ body.pipboy .forecast-time { color: var(--text-color); }
                     pPlay.runners.forEach(pRunner => {
                         if (pRunner.details) {
                             if (pRunner.details.isError) {
-                                const vNom = pRunner.details.responsibleFielder ? pRunner.details.responsibleFielder.fullName : "Erreur collective";
+                                const vNom = pRunner.details.responsibleFielder ? pRunner.details.responsibleFielder.fullName : t('collectiveError');
                                 vNomsErreurs.push(vNom);
                             }
                             if (pRunner.details.credits) {
                                 pRunner.details.credits.forEach(pCredit => {
                                     if (pCredit.credit && pCredit.credit.toLowerCase().includes('error')) {
-                                        vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : "Erreur collective");
+                                        vNomsErreurs.push(pCredit.player ? pCredit.player.fullName : t('collectiveError'));
                                     }
                                 });
                             }
@@ -423,7 +498,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 if (vNomsErreurs.length === 0 && pPlay.result && pPlay.result.description && pPlay.result.description.toLowerCase().includes('error')) {
                     const vDesc = pPlay.result.description;
                     const vMatch = vDesc.match(/error by ([a-zA-Z\s.-]+?)(?=\.|\,|$|\sallows|\son|\sto)/i);
-                    vNomsErreurs.push(vMatch ? vMatch[1].trim() : "Erreur collective");
+                    vNomsErreurs.push(vMatch ? vMatch[1].trim() : t('collectiveError'));
                 }
 
                 // Enregistrement des erreurs attribuées à l'équipe en défense
@@ -448,7 +523,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
             const vInnings = vLinescore.innings;
             const vNbManches = Math.max(9, vInnings.length);
 
-            let vHtml = `<table class="linescore-table"><thead><tr><th>Équipe</th>`;
+            let vHtml = `<table class="linescore-table"><thead><tr><th>${vLangue === 'en' ? 'Team' : 'Équipe'}</th>`;
             for (let i = 1; i <= vNbManches; i++) {
                 vHtml += `<th>${i}</th>`;
             }
@@ -457,17 +532,17 @@ body.pipboy .forecast-time { color: var(--text-color); }
             function genererTooltipManche(pCle) {
                 const vInfo = pDetails.manches[pCle];
                 if (!vInfo || (vInfo.hits.length === 0 && vInfo.points.length === 0)) {
-                    return `<span class="tooltip">Aucun coup sûr ni point</span>`;
+                    return `<span class="tooltip">${t('noHits')}</span>`;
                 }
 
                 let vTexte = `<span class="tooltip">`;
                 if (vInfo.hits.length > 0) {
-                    vTexte += `<strong>Coups sûrs:</strong><br>`;
+                    vTexte += `<strong>${t('hits')}:</strong><br>`;
                     vInfo.hits.forEach(h => { vTexte += `• ${h.frappeur} (${h.type})<br>`; });
                 }
                 if (vInfo.points.length > 0) {
                     if (vInfo.hits.length > 0) vTexte += `<br>`;
-                    vTexte += `<strong>Points produits:</strong><br>`;
+                    vTexte += `<strong>${t('runsBattedIn')}:</strong><br>`;
                     vInfo.points.forEach(p => { vTexte += `• ${p.frappeur} (${p.rbi} PP)<br>`; });
                 }
                 vTexte += `</span>`;
@@ -479,11 +554,11 @@ function genererTooltipTotal(pEquipe, pType) {
     const vNoms = Object.keys(vObj);
     
     if (vNoms.length === 0) {
-        const vMessageVide = pType === "erreurs" ? "Aucune erreur" : "Aucune donnée";
+        const vMessageVide = pType === "erreurs" ? t('noErrors') : t('noData');
         return `<span class="tooltip">${vMessageVide}</span>`;
     }
 
-    let vTitre = pType === "hits" ? "Coups sûrs" : (pType === "points" ? "Points produits" : "Erreurs");
+    let vTitre = pType === "hits" ? t('hits') : (pType === "points" ? t('runsBattedIn') : t('errors'));
     let vTexte = `<span class="tooltip"><strong>${vTitre}:</strong><br>`;
     vNoms.forEach(pNom => { vTexte += `• ${pNom} : ${vObj[pNom]}<br>`; });
     vTexte += `</span>`;
@@ -557,10 +632,10 @@ async function fetchBlueJays(pTeamId) {
                 // Match en direct
                 if (vMatchEnDirect) {
                     const vDetailsDirect = await fetchDetailsParManche(vMatchEnDirect.gamePk);
-                    vHtml += `<div style="color: #ff4444; font-weight: bold; margin-bottom: 5px;">🔴 EN DIRECT</div>`;
+                    vHtml += `<div style="color: #ff4444; font-weight: bold; margin-bottom: 5px;">🔴 ${t('live')}</div>`;
                     if (vMatchEnDirect.linescore && vMatchEnDirect.linescore.currentInning) {
-                        const vEtatManche = vMatchEnDirect.linescore.inningState || (vMatchEnDirect.linescore.isTopInning ? "Haut" : "Bas") || "";
-                        vHtml += `<small style="color: #aaa;">Manche : ${vEtatManche} ${vMatchEnDirect.linescore.currentInning}</small>`;
+                        const vEtatManche = vMatchEnDirect.linescore.inningState || (vMatchEnDirect.linescore.isTopInning ? (vLangue === 'en' ? "Top" : "Haut") : (vLangue === 'en' ? "Bottom" : "Bas")) || "";
+                        vHtml += `<small style="color: #aaa;">${t('inning')} : ${vEtatManche} ${vMatchEnDirect.linescore.currentInning}</small>`;
                     }
                     vHtml += construireTableauIndicateur(vMatchEnDirect, vDetailsDirect);
                 }
@@ -569,7 +644,7 @@ async function fetchBlueJays(pTeamId) {
                 if (vMatchsTermines.length > 0) {
                     const vDernier = vMatchsTermines[vMatchsTermines.length - 1];
                     const vDetailsDernier = await fetchDetailsParManche(vDernier.gamePk);
-                    vHtml += `<div style="font-size: 0.9rem; color: #888;">Dernier match :</div>`;
+                    vHtml += `<div style="font-size: 0.9rem; color: #888;">${t('lastGame')}</div>`;
                     vHtml += construireTableauIndicateur(vDernier, vDetailsDernier);
                 }
 
@@ -577,19 +652,19 @@ async function fetchBlueJays(pTeamId) {
                 if (vProchainsMatchs.length > 0) {
                     const vProchain = vProchainsMatchs[0];
                     const vDateHeure = new Date(vProchain.gameDate);
-                    const vHeureLocale = vDateHeure.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-                    const vJourLocal = vDateHeure.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+                    const vHeureLocale = vDateHeure.toLocaleTimeString(vLocale(), { hour: '2-digit', minute: '2-digit' });
+                    const vJourLocal = vDateHeure.toLocaleDateString(vLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
 
-                    vHtml += `<div style="font-size: 0.9rem; color: #888; margin-top: 10px;">Prochain match :</div>`;
+                    vHtml += `<div style="font-size: 0.9rem; color: #888; margin-top: 10px;">${t('nextGame')}</div>`;
                     vHtml += `<div style="font-weight: bold; margin-top: 3px;">${vProchain.teams.away.team.name} @ ${vProchain.teams.home.team.name}</div>`;
                     vHtml += `<small style="color: var(--title-color);">${vJourLocal} à ${vHeureLocale}</small>`;
                 }
 
-                const vHeureMaj = new Date().toLocaleTimeString('fr-CA');
-                vHtml += `<div style="font-size: 0.75rem; color: #777; margin-top: 10px; text-align: right;">Dernière MàJ : ${vHeureMaj}</div>`;
-                document.getElementById('divJays').innerHTML = vHtml || "Aucun match trouvé.";
+                const vHeureMaj = new Date().toLocaleTimeString(vLocale());
+                vHtml += `<div style="font-size: 0.75rem; color: #777; margin-top: 10px; text-align: right;">${t('lastUpdate')} ${vHeureMaj}</div>`;
+                document.getElementById('divJays').innerHTML = vHtml || t('noGame');
             } else {
-                document.getElementById('divJays').innerText = "Aucun match au calendrier récent.";
+                document.getElementById('divJays').innerText = t('noRecentGames');
             }
 
             // Ajustement dynamique du délai : 30s en direct, 5 min sinon
@@ -599,7 +674,7 @@ async function fetchBlueJays(pTeamId) {
 
         } catch (vErreur) {
             console.error("Erreur MLB:", vErreur);
-            document.getElementById('divJays').innerText = "Erreur de chargement des données MLB";
+            document.getElementById('divJays').innerText = t('mlbError');
             if (vTimerMlb) clearInterval(vTimerMlb);
             vTimerMlb = setInterval(vRafraichir, 60000); // 1 min en cas d'erreur réseau
         }
@@ -617,7 +692,7 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
     const vContainer = document.getElementById('divMonthlyGames');
 
     if (!pApiKey || pApiKey === 'VOTRE_CLE_API') {
-        vContainer.innerText = "Clé API manquante.";
+        vContainer.innerText = t('missingApiKey');
         return;
     }
 
@@ -633,7 +708,7 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
 
     const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10`;
 
-    vContainer.innerText = "Chargement des sorties...";
+    vContainer.innerText = t('loadingReleases');
 
     try {
         const vResponse = await fetch(vUrl);
@@ -644,14 +719,14 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
         const vData = await vResponse.json();
 
         if (!vData.results || vData.results.length === 0) {
-            vContainer.innerText = "Aucune sortie majeure trouvée pour ce mois.";
+            vContainer.innerText = t('noReleases');
             return;
         }
 
         let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
 
         vData.results.forEach(pJeu => {
-            const vDateSortie = pJeu.released || "Date inconnue";
+            const vDateSortie = pJeu.released || t('unknownDate');
             const vPlateformes = pJeu.platforms 
                 ? pJeu.platforms.map(pP => pP.platform.name).join(', ') 
                 : 'N/A';
@@ -660,14 +735,14 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
                 <strong>${pJeu.name}</strong> 
                 <span style="font-size: 0.85rem; opacity: 0.8;">(${vPlateformes})</span>
                 <br>
-                <small style="color: var(--title-color);">Sortie : ${vDateSortie}</small>
+                <small style="color: var(--title-color);">${t('release')} ${vDateSortie}</small>
             </li>`;
         });
 
         vHtml += '</ul>';
         vContainer.innerHTML = vHtml;
     } catch (vErreur) {
-        vContainer.innerText = `Impossible de charger les sorties (${vErreur.message}).`;
+        vContainer.innerText = `${t('releasesError')} (${vErreur.message}).`;
         console.error(vErreur);
     }
 }
