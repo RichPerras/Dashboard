@@ -112,6 +112,19 @@ body.pipboy .forecast-time { color: var(--text-color); }
 .btn-pagination:hover:not(:disabled) { filter: brightness(1.3); }
 .btn-pagination:disabled { opacity: 0.5; cursor: not-allowed; }
 .pagination-container { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 10px; }
+
+/* === BOUTONS NIVEAU MLB === */
+.btn-level {
+    background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--border-color);
+    padding: 4px 8px; border-radius: 4px; font-family: var(--font-family); font-size: 0.85rem;
+    cursor: pointer; transition: filter 0.2s;
+}
+.btn-level:hover { filter: brightness(1.3); }
+.btn-level.active {
+    background-color: var(--title-color);
+    color: var(--bg-color);
+    font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -152,9 +165,9 @@ body.pipboy .forecast-time { color: var(--text-color); }
         <div id="divPrevisions" class="forecast-container"></div>
     </div>
 <div class="card">
-    <div class="city-header">
+    <div class="city-header" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%;">
         <h2 data-i18n="mlb">⚾ MLB :</h2>
-        <select id="selEquipeMlb" class="city-input" onchange="fetchBlueJays(this.value)">
+        <select id="selEquipeMlb" class="city-input" style="flex: 1; min-width: 120px;" onchange="changerEquipeMlb(this.value)">
             <option value="109">Arizona Diamondbacks</option>
             <option value="144">Atlanta Braves</option>
             <option value="110">Baltimore Orioles</option>
@@ -186,6 +199,11 @@ body.pipboy .forecast-time { color: var(--text-color); }
             <option value="141" selected>Toronto Blue Jays</option>
             <option value="120">Washington Nationals</option>
         </select>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto;">
+            <button id="btnLevelMLB" class="btn-level active" onclick="changerLevel('MLB')">MLB</button>
+            <button id="btnLevelAAA" class="btn-level" onclick="changerLevel('AAA')">AAA</button>
+            <button id="btnLevelAA" class="btn-level" onclick="changerLevel('AA')">AA</button>
+        </div>
     </div>
     <div id="divJays">Chargement...</div>
 </div>
@@ -500,11 +518,66 @@ body.pipboy .forecast-time { color: var(--text-color); }
                     vDataMatch.totaux[vEquipe].hits[vFrappeur].details.push(vDetailStr);
                 }
 
-                // Points produits
-                if (pPlay.result && pPlay.result.rbi && pPlay.result.rbi > 0) {
-                    const vFrappeur = pPlay.matchup.batter.fullName;
-                    vDataMatch.manches[vCle].points.push({ frappeur: vFrappeur, rbi: pPlay.result.rbi });
-                    vDataMatch.totaux[vEquipe].points[vFrappeur] = (vDataMatch.totaux[vEquipe].points[vFrappeur] || 0) + pPlay.result.rbi;
+                // Points produits et autres points (Wild Pitch, Erreur, etc.)
+                let vRunsOnPlay = 0;
+                if (pPlay.runners) {
+                    pPlay.runners.forEach(pRunner => {
+                        if (pRunner.movement && (pRunner.movement.end === "score" || pRunner.movement.end === "4")) {
+                            vRunsOnPlay++;
+                        }
+                    });
+                }
+                
+                const vIsScoring = pPlay.about && pPlay.about.isScoringPlay;
+                if (vRunsOnPlay === 0 && vIsScoring) {
+                    vRunsOnPlay = (pPlay.result && pPlay.result.rbi) ? pPlay.result.rbi : 1;
+                }
+
+                if (vRunsOnPlay > 0) {
+                    const vRbi = (pPlay.result && pPlay.result.rbi) ? pPlay.result.rbi : 0;
+                    
+                    if (vRbi > 0) {
+                        const vFrappeur = pPlay.matchup.batter.fullName;
+                        vDataMatch.manches[vCle].points.push({ frappeur: vFrappeur, rbi: vRbi });
+                        
+                        const vEventsAbrev = {
+                            "Home Run": "HR",
+                            "Single": "1B",
+                            "Double": "2B",
+                            "Triple": "3B",
+                            "Sac Fly": "Sac Fly",
+                            "Sacrifice Fly": "Sac Fly",
+                            "Groundout": "Groundout",
+                            "Walk": "Walk",
+                            "Fielder's Choice": "FC",
+                            "Strikeout": "K"
+                        };
+                        const vAction = vEventsAbrev[pPlay.result.event] || pPlay.result.event || "Option";
+                        
+                        if (!vDataMatch.totaux[vEquipe].points[vFrappeur]) {
+                            vDataMatch.totaux[vEquipe].points[vFrappeur] = { total: 0, details: [] };
+                        }
+                        vDataMatch.totaux[vEquipe].points[vFrappeur].total += vRbi;
+                        vDataMatch.totaux[vEquipe].points[vFrappeur].details.push(`${vRbi} pts (${vAction})`);
+                    }
+
+                    const vUnearnedRuns = vRunsOnPlay - vRbi;
+                    if (vUnearnedRuns > 0) {
+                        const vEventName = (pPlay.result && pPlay.result.event) ? pPlay.result.event : "Autre";
+                        let vEventDisplay = vEventName;
+                        if (vLangue === 'fr') {
+                            if (vEventName.toLowerCase().includes("wild pitch")) vEventDisplay = "Lancer sauvage";
+                            else if (vEventName.toLowerCase().includes("passed ball")) vEventDisplay = "Balle passée";
+                            else if (vEventName.toLowerCase().includes("error")) vEventDisplay = "Erreur";
+                            else if (vEventName.toLowerCase().includes("balk")) vEventDisplay = "Balk";
+                        }
+                        
+                        if (!vDataMatch.totaux[vEquipe].points[vEventDisplay]) {
+                            vDataMatch.totaux[vEquipe].points[vEventDisplay] = { total: 0, details: [] };
+                        }
+                        vDataMatch.totaux[vEquipe].points[vEventDisplay].total += vUnearnedRuns;
+                        vDataMatch.totaux[vEquipe].points[vEventDisplay].details.push(`${vUnearnedRuns} pts`);
+                    }
                 }
 
                 // --- CAPTURE DES ERREURS MULTI-SOURCES ---
@@ -615,11 +688,18 @@ function genererTooltipTotal(pEquipe, pType) {
         return `<span class="tooltip">${vMessageVide}</span>`;
     }
 
-    let vTitre = pType === "hits" ? t('hits') : (pType === "points" ? t('runsBattedIn') : t('errors'));
+    let vTitre = pType === "hits" ? t('hits') : (pType === "points" ? (vLangue === 'en' ? 'Runs scored' : 'Points produits / marqués') : t('errors'));
     let vTexte = `<span class="tooltip"><strong>${vTitre}:</strong><br>`;
     vNoms.forEach(pNom => {
         if (pType === "hits" && typeof vObj[pNom] === 'object') {
             vTexte += `• ${pNom} : ${vObj[pNom].total} (${vObj[pNom].details.join(', ')})<br>`;
+        } else if (pType === "points" && typeof vObj[pNom] === 'object') {
+            const vSpecialEvents = ["Lancer sauvage", "Wild Pitch", "Balle passée", "Passed Ball", "Erreur", "Error", "Balk"];
+            if (vObj[pNom].details.length > 0 && !vSpecialEvents.includes(pNom)) {
+                vTexte += `• ${pNom} : ${vObj[pNom].total} (${vObj[pNom].details.join(', ')})<br>`;
+            } else {
+                vTexte += `• ${pNom} : ${vObj[pNom].total}<br>`;
+            }
         } else {
             vTexte += `• ${pNom} : ${vObj[pNom]}<br>`;
         }
@@ -660,6 +740,49 @@ let vDernierGamePk = null;
 let vDernierAwayScore = null;
 let vDernierHomeScore = null;
 
+let vMlbParentId = "141";
+let vCurrentLevel = "MLB";
+let vAffiliates = { AAA: null, AA: null };
+
+async function getAffiliates(pParentId) {
+    try {
+        const vUrl = `https://statsapi.mlb.com/api/v1/teams?parentOrgId=${pParentId}`;
+        const vResponse = await fetch(vUrl);
+        const vData = await vResponse.json();
+        
+        let vAaaId = null;
+        let vAaId = null;
+        
+        if (vData.teams) {
+            const vAaaTeam = vData.teams.find(t => t.sport && t.sport.id === 11);
+            if (vAaaTeam) vAaaId = vAaaTeam.id;
+            
+            const vAaTeam = vData.teams.find(t => t.sport && t.sport.id === 12);
+            if (vAaTeam) vAaId = vAaTeam.id;
+        }
+        return { AAA: vAaaId, AA: vAaId };
+    } catch (e) {
+        console.error("Erreur getAffiliates", e);
+        return { AAA: null, AA: null };
+    }
+}
+
+async function changerEquipeMlb(pTeamId) {
+    vMlbParentId = pTeamId;
+    vAffiliates = await getAffiliates(pTeamId);
+    fetchBlueJays(vMlbParentId);
+}
+
+async function changerLevel(pLevel) {
+    vCurrentLevel = pLevel;
+    document.querySelectorAll('.btn-level').forEach(btn => btn.classList.remove('active'));
+    const btnActive = document.getElementById(`btnLevel${pLevel}`);
+    if (btnActive) {
+        btnActive.classList.add('active');
+    }
+    fetchBlueJays(vMlbParentId);
+}
+
 async function fetchBlueJays(pTeamId) {
     if (vTimerMlb) {
         clearInterval(vTimerMlb);
@@ -679,7 +802,23 @@ async function fetchBlueJays(pTeamId) {
             const vStrDebut = vDebut.toLocaleDateString('sv-SE');
             const vStrFin = vFin.toLocaleDateString('sv-SE');
 
-            const vUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${pTeamId}&startDate=${vStrDebut}&endDate=${vStrFin}&hydrate=linescore`;
+            let vSportId = 1;
+            let vTargetTeamId = pTeamId;
+
+            if (vCurrentLevel === "AAA") {
+                vSportId = 11;
+                vTargetTeamId = vAffiliates.AAA;
+            } else if (vCurrentLevel === "AA") {
+                vSportId = 12;
+                vTargetTeamId = vAffiliates.AA;
+            }
+
+            if (!vTargetTeamId) {
+                document.getElementById('divJays').innerText = t('noGame');
+                return;
+            }
+
+            const vUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=${vSportId}&teamId=${vTargetTeamId}&startDate=${vStrDebut}&endDate=${vStrFin}&hydrate=linescore`;
             const vResponse = await fetch(vUrl);
             const vData = await vResponse.json();
 
@@ -773,7 +912,11 @@ async function fetchBlueJays(pTeamId) {
 }
 
 // Lancement initial
-fetchBlueJays(141);
+async function initialiserMlb() {
+    vAffiliates = await getAffiliates(vMlbParentId);
+    fetchBlueJays(vMlbParentId);
+}
+initialiserMlb();
 
 const vApiKey = 'eee5e318da824cb0a4bee394e6cf3a39';
 let vPageJeux = 1;
