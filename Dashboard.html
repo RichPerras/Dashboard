@@ -479,7 +479,25 @@ body.pipboy .forecast-time { color: var(--text-color); }
                    ['single', 'double', 'triple', 'home_run'].includes(pPlay.result.eventType)) {
                     const vFrappeur = pPlay.matchup.batter.fullName;
                     vDataMatch.manches[vCle].hits.push({ frappeur: vFrappeur, type: pPlay.result.event });
-                    vDataMatch.totaux[vEquipe].hits[vFrappeur] = (vDataMatch.totaux[vEquipe].hits[vFrappeur] || 0) + 1;
+                    
+                    const vTypesAbrev = {
+                        single: "1B",
+                        double: "2B",
+                        triple: "3B",
+                        home_run: "HR"
+                    };
+                    const vAbrev = vTypesAbrev[pPlay.result.eventType] || pPlay.result.eventType;
+                    const vRbi = pPlay.result.rbi && pPlay.result.rbi > 0 ? pPlay.result.rbi : 0;
+                    let vDetailStr = vAbrev;
+                    if (vRbi > 0) {
+                        vDetailStr += ` ${vRbi} pts`;
+                    }
+
+                    if (!vDataMatch.totaux[vEquipe].hits[vFrappeur]) {
+                        vDataMatch.totaux[vEquipe].hits[vFrappeur] = { total: 0, details: [] };
+                    }
+                    vDataMatch.totaux[vEquipe].hits[vFrappeur].total += 1;
+                    vDataMatch.totaux[vEquipe].hits[vFrappeur].details.push(vDetailStr);
                 }
 
                 // Points produits
@@ -599,7 +617,13 @@ function genererTooltipTotal(pEquipe, pType) {
 
     let vTitre = pType === "hits" ? t('hits') : (pType === "points" ? t('runsBattedIn') : t('errors'));
     let vTexte = `<span class="tooltip"><strong>${vTitre}:</strong><br>`;
-    vNoms.forEach(pNom => { vTexte += `• ${pNom} : ${vObj[pNom]}<br>`; });
+    vNoms.forEach(pNom => {
+        if (pType === "hits" && typeof vObj[pNom] === 'object') {
+            vTexte += `• ${pNom} : ${vObj[pNom].total} (${vObj[pNom].details.join(', ')})<br>`;
+        } else {
+            vTexte += `• ${pNom} : ${vObj[pNom]}<br>`;
+        }
+    });
     vTexte += `</span>`;
     return vTexte;
 }
