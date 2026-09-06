@@ -128,6 +128,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
 </style>
 </head>
 <body>
+    <h1 style="color: var(--title-color); font-size: 1.5rem; margin: 0 0 10px 0; text-shadow: var(--text-shadow);">Dashboard 2.0</h1>
+
 
     <div class="toggle-container">
         <span class="toggle-label">PIP-BOY</span>
@@ -209,10 +211,16 @@ body.pipboy .forecast-time { color: var(--text-color); }
 </div>
 
 <div class="card">
-    <h2 data-i18n="gameReleases">🎮 Sorties jeux vidéo</h2>
+    <div class="city-header" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">
+        <h2 id="titleMedia" data-i18n="gameReleases">🎮 Sorties jeux vidéo</h2>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto;">
+            <button id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">Jeux</button>
+            <button id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinema</button>
+        </div>
+    </div>
     <div style="margin-bottom: 12px;">
         <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
-        <input type="month" id="inputMois" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <input type="month" id="inputMois" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--input-bg); color: var(--text-color); border-color: var(--border-color);">
     </div>
     <div id="divMonthlyGames">Chargement des sorties...</div>
 </div>
@@ -221,6 +229,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
         const vTraductions = {
             fr: {
                 pageTitle: "Tableau de Bord", localTime: "🕒 Heure locale", weather: "🌤️ Météo :", mlb: "⚾ MLB:", gameReleases: "🎮 Sorties jeux vidéo",
+                cinemaReleases: "🍿 Sorties cinéma Québec",
+
                 chooseMonth: "Choisir le mois :", gpsTitle: "Utiliser ma position GPS", loading: "Chargement...",
                 locating: "Localisation...", myPosition: "Ma position", gpsError: "Erreur GPS",
                 gpsUnavailable: "La géolocalisation n'est pas supportée par votre navigateur.",
@@ -238,6 +248,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
             },
             en: {
                 pageTitle: "Dashboard", localTime: "🕒 Local time", weather: "🌤️ Weather:", mlb: "⚾ MLB:", gameReleases: "🎮 Video game releases",
+                cinemaReleases: "🍿 Quebec movie releases",
+
                 chooseMonth: "Choose month: ", gpsTitle: "Use my GPS location", loading: "Loading...",
                 locating: "Locating...", myPosition: "My location", gpsError: "GPS error",
                 gpsUnavailable: "Geolocation is not supported by your browser.",
@@ -280,7 +292,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
             const vMois = document.getElementById('inputMois').value;
             if (vMois) {
                 const [vAnnee, vMoisChoisi] = vMois.split('-');
-                chargerSortiesMoisAuto(vApiKey, vAnnee, vMoisChoisi, vPageJeux);
+                chargerSortiesJeux(vApiKey, vAnnee, vMoisChoisi, vPageJeux);
             }
         }
 
@@ -920,8 +932,91 @@ initialiserMlb();
 
 const vApiKey = 'eee5e318da824cb0a4bee394e6cf3a39';
 let vPageJeux = 1;
+let vCurrentMediaType = 'Games';
 
-async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null, pPage = 1) {
+async function changerMedia(pType) {
+    vCurrentMediaType = pType;
+    
+    // Update buttons
+    document.querySelectorAll('.btn-level').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(pType === 'Games' ? 'btnMediaGames' : 'btnMediaCinema').classList.add('active');
+    
+    // Update title
+    document.getElementById('titleMedia').innerText = pType === 'Games' ? t('gameReleases') : t('cinemaReleases');
+    
+    // Reload
+    rechargerMedia();
+}
+
+async function rechargerMedia() {
+    const vInputMois = document.getElementById('inputMois');
+    if (!vInputMois || !vInputMois.value) return;
+    
+    const [vAnnee, vMois] = vInputMois.value.split('-');
+    
+    if (vCurrentMediaType === 'Games') {
+        await chargerSortiesJeux(vApiKey, vAnnee, vMois, 1);
+    } else {
+        await chargerSortiesCinema(vAnnee, vMois);
+    }
+}
+
+async function chargerSortiesCinema(pAnnee, pMois) {
+    const vContainer = document.getElementById('divMonthlyGames');
+    vContainer.innerText = t('loading');
+    
+    try {
+        const vUrl = `https://www.cinoche.com/films/a-venir/${pAnnee}-${pMois}`;
+        const vResponse = await fetch(vUrl);
+        if (!vResponse.ok) throw new Error('Network response was not ok');
+        
+        const vText = await vResponse.text();
+        const vParser = new DOMParser();
+        const vDoc = vParser.parseFromString(vText, 'text/html');
+        
+        // Find article elements or movie blocks. Usually cards or list items.
+        // Let's look for headers/links that have dates.
+        const vCards = Array.from(vDoc.querySelectorAll('a[href^="/films/"]'));
+        const vMoviesMap = new Map();
+        
+        vCards.forEach(vLink => {
+            const vHref = vLink.getAttribute('href');
+            if (vHref && vHref.length > 8 && !vHref.includes('/numerique') && !vHref.includes('/a-venir') && !vHref.includes('/criteres')) {
+                let vTitle = vLink.innerText.trim().replace(/\s+/g, ' ');
+                // Clean up duplicate titles or trailing details if any
+                if (vTitle.length > 2 && !vMoviesMap.has(vHref)) {
+                    // Filter out non-movie generic links
+                    if (!vTitle.startsWith('Films') && !vTitle.startsWith('Trier') && !vTitle.startsWith('Sortie')) {
+                        vMoviesMap.set(vHref, { title: vTitle, url: `https://www.cinoche.com${vHref}` });
+                    }
+                }
+            }
+        });
+        
+        const vMovies = Array.from(vMoviesMap.values());
+        
+        if (vMovies.length === 0) {
+            vContainer.innerText = t('noReleases');
+            return;
+        }
+        
+        let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
+        vMovies.slice(0, 10).forEach(vMovie => {
+            vHtml += `<li style="margin-bottom: 8px;">
+                <a href="${vMovie.url}" target="_blank" style="color: var(--title-color); text-decoration: underline;">${vMovie.title}</a>
+            </li>`;
+        });
+        vHtml += '</ul>';
+        vContainer.innerHTML = vHtml;
+        
+    } catch (e) {
+        vContainer.innerText = `${t('releasesError')}: ${e.message}`;
+    }
+}
+
+
+
+async function chargerSortiesJeux(pApiKey, pAnnee = null, pMois = null, pPage = 1) {
     const vContainer = document.getElementById('divMonthlyGames');
 
     if (!pApiKey || pApiKey === 'VOTRE_CLE_API') {
@@ -1003,7 +1098,7 @@ function changerPageJeux(pDirection) {
     const vInputMois = document.getElementById('inputMois');
     if (vInputMois && vInputMois.value) {
         const [vAnnee, vMois] = vInputMois.value.split('-');
-        chargerSortiesMoisAuto(vApiKey, vAnnee, vMois, vPageJeux + pDirection);
+        chargerSortiesJeux(vApiKey, vAnnee, vMois, vPageJeux + pDirection);
     }
 }
 
@@ -1022,14 +1117,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Recharger lors d'un changement de valeur
         vInputMois.addEventListener('change', (pEvent) => {
             if (pEvent.target.value) {
-                const [vAnnee, vMois] = pEvent.target.value.split('-');
-                chargerSortiesMoisAuto(vApiKey, vAnnee, vMois, 1);
+                rechargerMedia();
             }
         });
     }
 
     // Premier appel avec le mois courant
-    chargerSortiesMoisAuto(vApiKey, vAnneeCourante, vMoisCourant, 1);
+    chargerSortiesJeux(vApiKey, vAnneeCourante, vMoisCourant, 1);
 });
     </script>
 </body>
