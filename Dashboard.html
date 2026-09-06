@@ -148,6 +148,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
             <div id="divMeteo" class="data">Chargement...</div>
             <div id="divHeureVille" class="city-time"></div>
         </div>
+        <div id="divDailyMeteo" style="font-size: 0.9rem; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 4px;"></div>
         <div id="divPrevisions" class="forecast-container"></div>
     </div>
 <div class="card">
@@ -214,7 +215,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 missingApiKey: "Clé API manquante.", loadingReleases: "Chargement des sorties...",
                 noReleases: "Aucune sortie majeure trouvée pour ce mois.", release: "Sortie :",
                 unknownDate: "Date inconnue", collectiveError: "Erreur collective", releasesError: "Impossible de charger les sorties",
-                prevPage: "Précédent", nextPage: "Suivant"
+                prevPage: "Précédent", nextPage: "Suivant",
+                today: "Aujourd'hui", tomorrow: "Demain", feelsLike: "Ressenti"
             },
             en: {
                 pageTitle: "Dashboard", localTime: "🕒 Local time", weather: "🌤️ Weather:", mlb: "⚾ MLB:", gameReleases: "🎮 Video game releases",
@@ -230,7 +232,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 missingApiKey: "Missing API key.", loadingReleases: "Loading releases...",
                 noReleases: "No major releases found for this month.", release: "Release:",
                 unknownDate: "Unknown date", collectiveError: "Team error", releasesError: "Unable to load releases",
-                prevPage: "Previous", nextPage: "Next"
+                prevPage: "Previous", nextPage: "Next",
+                today: "Today", tomorrow: "Tomorrow", feelsLike: "Feels like"
             }
         };
         let vLangue = localStorage.getItem('language') || 'fr';
@@ -373,18 +376,14 @@ body.pipboy .forecast-time { color: var(--text-color); }
 
         async function fetchMeteo(pLat, pLon, pTimezone) {
             try {
-                const vUrl = `https://api.open-meteo.com/v1/forecast?latitude=${pLat}&longitude=${pLon}&current_weather=true&hourly=temperature_2m,precipitation_probability,weathercode&timezone=${encodeURIComponent(pTimezone)}`;
+                const vUrl = `https://api.open-meteo.com/v1/forecast?latitude=${pLat}&longitude=${pLon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min&timezone=${encodeURIComponent(pTimezone)}`;
                 const vResponse = await fetch(vUrl);
                 const vData = await vResponse.json();
                 
-                // Température actuelle
-                const vTempActuelle = Math.round(vData.current_weather.temperature);
-                const vIconeActuelle = getIconeMeteo(vData.current_weather.weathercode);
-                document.getElementById('divMeteo').innerText = `${vIconeActuelle} ${vTempActuelle} °C`;
-
                 // Prévisions 12 prochaines heures
                 const vHeures = vData.hourly.time;
                 const vTemps = vData.hourly.temperature_2m;
+                const vApparents = vData.hourly.apparent_temperature;
                 const vPops = vData.hourly.precipitation_probability;
                 const vCodes = vData.hourly.weathercode;
 
@@ -394,6 +393,34 @@ body.pipboy .forecast-time { color: var(--text-color); }
 
                 let vIndexDepart = vHeures.findIndex(h => h.startsWith(vPrefixeIso));
                 if (vIndexDepart === -1) vIndexDepart = 0;
+
+                // Température actuelle
+                const vTempActuelle = Math.round(vData.current_weather.temperature);
+                const vApparentActuelle = vApparents && vApparents[vIndexDepart] !== undefined ? Math.round(vApparents[vIndexDepart]) : vTempActuelle;
+                const vIconeActuelle = getIconeMeteo(vData.current_weather.weathercode);
+                document.getElementById('divMeteo').innerText = `${vIconeActuelle} ${vTempActuelle} °C (${t('feelsLike')}: ${vApparentActuelle} °C)`;
+
+                // Affichage Météo du jour (daily index 0) et du lendemain (daily index 1)
+                let vHtmlDaily = "";
+                if (vData.daily) {
+                    const vDailyMin0 = Math.round(vData.daily.temperature_2m_min[0]);
+                    const vDailyMax0 = Math.round(vData.daily.temperature_2m_max[0]);
+                    const vDailyAppMin0 = Math.round(vData.daily.apparent_temperature_min[0]);
+                    const vDailyAppMax0 = Math.round(vData.daily.apparent_temperature_max[0]);
+                    const vDailyIcon0 = getIconeMeteo(vData.daily.weathercode[0]);
+
+                    const vDailyMin1 = Math.round(vData.daily.temperature_2m_min[1]);
+                    const vDailyMax1 = Math.round(vData.daily.temperature_2m_max[1]);
+                    const vDailyAppMin1 = Math.round(vData.daily.apparent_temperature_min[1]);
+                    const vDailyAppMax1 = Math.round(vData.daily.apparent_temperature_max[1]);
+                    const vDailyIcon1 = getIconeMeteo(vData.daily.weathercode[1]);
+
+                    vHtmlDaily = `
+                        <div><strong>${t('today')} :</strong> ${vDailyIcon0} ${vDailyMin0}°C / ${vDailyMax0}°C (${t('feelsLike')}: ${vDailyAppMin0}°C / ${vDailyAppMax0}°C)</div>
+                        <div><strong>${t('tomorrow')} :</strong> ${vDailyIcon1} ${vDailyMin1}°C / ${vDailyMax1}°C (${t('feelsLike')}: ${vDailyAppMin1}°C / ${vDailyAppMax1}°C)</div>
+                    `;
+                }
+                document.getElementById('divDailyMeteo').innerHTML = vHtmlDaily;
 
                 let vHtmlPrev = "";
                 for (let i = vIndexDepart; i < vIndexDepart + 12 && i < vHeures.length; i++) {
@@ -605,6 +632,9 @@ function genererTooltipTotal(pEquipe, pType) {
 
 // 3. Suivi MLB
 let vTimerMlb = null;
+let vDernierGamePk = null;
+let vDernierAwayScore = null;
+let vDernierHomeScore = null;
 
 async function fetchBlueJays(pTeamId) {
     if (vTimerMlb) {
@@ -638,6 +668,29 @@ async function fetchBlueJays(pTeamId) {
                 vMatchEnDirect = vTousLesMatchs.find(pJeu => pJeu.status.abstractGameState === "Live");
                 const vMatchsTermines = vTousLesMatchs.filter(pJeu => pJeu.status.abstractGameState === "Final");
                 const vProchainsMatchs = vTousLesMatchs.filter(pJeu => pJeu.status.abstractGameState === "Preview");
+
+                // Détecter un changement de score pour la vibration
+                const vGameAffiche = vMatchEnDirect || (vMatchsTermines.length > 0 ? vMatchsTermines[vMatchsTermines.length - 1] : null);
+                if (vGameAffiche) {
+                    const vGamePk = vGameAffiche.gamePk;
+                    const vAwayScore = vGameAffiche.teams.away.score ?? 0;
+                    const vHomeScore = vGameAffiche.teams.home.score ?? 0;
+
+                    if (vDernierGamePk === vGamePk) {
+                        if (vDernierAwayScore !== null && vDernierHomeScore !== null && (vDernierAwayScore !== vAwayScore || vDernierHomeScore !== vHomeScore)) {
+                            if (navigator.vibrate) {
+                                navigator.vibrate([200, 100, 200]);
+                            }
+                        }
+                    }
+                    vDernierGamePk = vGamePk;
+                    vDernierAwayScore = vAwayScore;
+                    vDernierHomeScore = vHomeScore;
+                } else {
+                    vDernierGamePk = null;
+                    vDernierAwayScore = null;
+                    vDernierHomeScore = null;
+                }
 
                 let vHtml = "";
 
@@ -721,7 +774,7 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null, pPag
     const vDateDebut = `${vAnnee}-${vMois}-01`;
     const vDateFin = `${vAnnee}-${vMois}-${vDernierJour}`;
 
-    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10&page=${pPage}`;
+    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=5&page=${pPage}`;
 
     vContainer.innerText = t('loadingReleases');
 
