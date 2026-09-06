@@ -102,6 +102,16 @@ body.pipboy .forecast-time { color: var(--text-color); }
 .linescore-table td:first-child .tooltip { left: 0; transform: none; }
 .linescore-table td:nth-last-child(-n+3) .tooltip { left: auto; right: 0; transform: none; }
 .linescore-table td:hover .tooltip { visibility: visible; opacity: 1; }
+
+/* === NAVIGATION JEUX === */
+.btn-pagination {
+    background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--border-color);
+    padding: 4px 10px; border-radius: 4px; font-family: var(--font-family); font-size: 0.85rem;
+    cursor: pointer; transition: filter 0.2s;
+}
+.btn-pagination:hover:not(:disabled) { filter: brightness(1.3); }
+.btn-pagination:disabled { opacity: 0.5; cursor: not-allowed; }
+.pagination-container { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -203,7 +213,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 noRecentGames: "Aucun match au calendrier récent.", mlbError: "Erreur de chargement des données MLB",
                 missingApiKey: "Clé API manquante.", loadingReleases: "Chargement des sorties...",
                 noReleases: "Aucune sortie majeure trouvée pour ce mois.", release: "Sortie :",
-                unknownDate: "Date inconnue", collectiveError: "Erreur collective", releasesError: "Impossible de charger les sorties"
+                unknownDate: "Date inconnue", collectiveError: "Erreur collective", releasesError: "Impossible de charger les sorties",
+                prevPage: "Précédent", nextPage: "Suivant"
             },
             en: {
                 pageTitle: "Dashboard", localTime: "🕒 Local time", weather: "🌤️ Weather:", mlb: "⚾ MLB:", gameReleases: "🎮 Video game releases",
@@ -218,7 +229,8 @@ body.pipboy .forecast-time { color: var(--text-color); }
                 noRecentGames: "No recent game on the schedule.", mlbError: "Error loading MLB data",
                 missingApiKey: "Missing API key.", loadingReleases: "Loading releases...",
                 noReleases: "No major releases found for this month.", release: "Release:",
-                unknownDate: "Unknown date", collectiveError: "Team error", releasesError: "Unable to load releases"
+                unknownDate: "Unknown date", collectiveError: "Team error", releasesError: "Unable to load releases",
+                prevPage: "Previous", nextPage: "Next"
             }
         };
         let vLangue = localStorage.getItem('language') || 'fr';
@@ -247,7 +259,7 @@ body.pipboy .forecast-time { color: var(--text-color); }
             const vMois = document.getElementById('inputMois').value;
             if (vMois) {
                 const [vAnnee, vMoisChoisi] = vMois.split('-');
-                chargerSortiesMoisAuto(vApiKey, vAnnee, vMoisChoisi);
+                chargerSortiesMoisAuto(vApiKey, vAnnee, vMoisChoisi, vPageJeux);
             }
         }
 
@@ -687,14 +699,17 @@ async function fetchBlueJays(pTeamId) {
 fetchBlueJays(141);
 
 const vApiKey = 'eee5e318da824cb0a4bee394e6cf3a39';
+let vPageJeux = 1;
 
-async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
+async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null, pPage = 1) {
     const vContainer = document.getElementById('divMonthlyGames');
 
     if (!pApiKey || pApiKey === 'VOTRE_CLE_API') {
         vContainer.innerText = t('missingApiKey');
         return;
     }
+
+    vPageJeux = pPage;
 
     const vMaintenant = new Date();
     const vAnnee = pAnnee || vMaintenant.getFullYear();
@@ -706,7 +721,7 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
     const vDateDebut = `${vAnnee}-${vMois}-01`;
     const vDateFin = `${vAnnee}-${vMois}-${vDernierJour}`;
 
-    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10`;
+    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10&page=${pPage}`;
 
     vContainer.innerText = t('loadingReleases');
 
@@ -741,10 +756,34 @@ async function chargerSortiesMoisAuto(pApiKey, pAnnee = null, pMois = null) {
         });
 
         vHtml += '</ul>';
+
+        // Ajout des boutons de pagination
+        const vHasPrev = vData.previous !== null;
+        const vHasNext = vData.next !== null;
+
+        vHtml += `
+        <div class="pagination-container">
+            <button class="btn-pagination" id="btnPagePrev" ${vHasPrev ? '' : 'disabled'} onclick="changerPageJeux(-1)">
+                ${t('prevPage')}
+            </button>
+            <span style="font-size: 0.85rem; font-weight: bold;">Page ${pPage}</span>
+            <button class="btn-pagination" id="btnPageNext" ${vHasNext ? '' : 'disabled'} onclick="changerPageJeux(1)">
+                ${t('nextPage')}
+            </button>
+        </div>`;
+
         vContainer.innerHTML = vHtml;
     } catch (vErreur) {
         vContainer.innerText = `${t('releasesError')} (${vErreur.message}).`;
         console.error(vErreur);
+    }
+}
+
+function changerPageJeux(pDirection) {
+    const vInputMois = document.getElementById('inputMois');
+    if (vInputMois && vInputMois.value) {
+        const [vAnnee, vMois] = vInputMois.value.split('-');
+        chargerSortiesMoisAuto(vApiKey, vAnnee, vMois, vPageJeux + pDirection);
     }
 }
 
@@ -764,13 +803,13 @@ document.addEventListener('DOMContentLoaded', () => {
         vInputMois.addEventListener('change', (pEvent) => {
             if (pEvent.target.value) {
                 const [vAnnee, vMois] = pEvent.target.value.split('-');
-                chargerSortiesMoisAuto(vApiKey, vAnnee, vMois);
+                chargerSortiesMoisAuto(vApiKey, vAnnee, vMois, 1);
             }
         });
     }
 
     // Premier appel avec le mois courant
-    chargerSortiesMoisAuto(vApiKey, vAnneeCourante, vMoisCourant);
+    chargerSortiesMoisAuto(vApiKey, vAnneeCourante, vMoisCourant, 1);
 });
     </script>
 </body>
