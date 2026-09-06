@@ -958,6 +958,10 @@ async function rechargerMedia() {
     }
 }
 
+let vAllMovies = [];
+let vCurrentPage = 1;
+const vItemsPerPage = 10;
+
 async function chargerSortiesCinema(pAnnee, pMois) {
     const vContainer = document.getElementById('divMonthlyGames');
     vContainer.innerText = t('loading');
@@ -971,8 +975,6 @@ async function chargerSortiesCinema(pAnnee, pMois) {
         const vParser = new DOMParser();
         const vDoc = vParser.parseFromString(vText, 'text/html');
         
-        // Find article elements or movie blocks. Usually cards or list items.
-        // Let's look for headers/links that have dates.
         const vCards = Array.from(vDoc.querySelectorAll('a[href^="/films/"]'));
         const vMoviesMap = new Map();
         
@@ -980,9 +982,7 @@ async function chargerSortiesCinema(pAnnee, pMois) {
             const vHref = vLink.getAttribute('href');
             if (vHref && vHref.length > 8 && !vHref.includes('/numerique') && !vHref.includes('/a-venir') && !vHref.includes('/criteres')) {
                 let vTitle = vLink.innerText.trim().replace(/\s+/g, ' ');
-                // Clean up duplicate titles or trailing details if any
                 if (vTitle.length > 2 && !vMoviesMap.has(vHref)) {
-                    // Filter out non-movie generic links
                     if (!vTitle.startsWith('Films') && !vTitle.startsWith('Trier') && !vTitle.startsWith('Sortie')) {
                         vMoviesMap.set(vHref, { title: vTitle, url: `https://www.cinoche.com${vHref}` });
                     }
@@ -990,25 +990,51 @@ async function chargerSortiesCinema(pAnnee, pMois) {
             }
         });
         
-        const vMovies = Array.from(vMoviesMap.values());
+        vAllMovies = Array.from(vMoviesMap.values());
+        vCurrentPage = 1;
         
-        if (vMovies.length === 0) {
+        if (vAllMovies.length === 0) {
             vContainer.innerText = t('noReleases');
             return;
         }
         
-        let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
-        vMovies.slice(0, 10).forEach(vMovie => {
-            vHtml += `<li style="margin-bottom: 8px;">
-                <a href="${vMovie.url}" target="_blank" style="color: var(--title-color); text-decoration: underline;">${vMovie.title}</a>
-            </li>`;
-        });
-        vHtml += '</ul>';
-        vContainer.innerHTML = vHtml;
+        afficherPageCourante();
         
     } catch (e) {
         vContainer.innerText = `${t('releasesError')}: ${e.message}`;
     }
+}
+
+function afficherPageCourante() {
+    const vContainer = document.getElementById('divMonthlyGames');
+    const vStartIndex = (vCurrentPage - 1) * vItemsPerPage;
+    const vEndIndex = vStartIndex + vItemsPerPage;
+    const vPaginatedMovies = vAllMovies.slice(vStartIndex, vEndIndex);
+    const vTotalPages = Math.ceil(vAllMovies.length / vItemsPerPage);
+    
+    let vHtml = '<ul style="padding-left: 15px; margin: 0 0 10px 0;">';
+    vPaginatedMovies.forEach(vMovie => {
+        vHtml += `<li style="margin-bottom: 8px;">
+            <a href="${vMovie.url}" target="_blank" style="color: var(--title-color); text-decoration: underline;">${vMovie.title}</a>
+        </li>`;
+    });
+    vHtml += '</ul>';
+    
+    vHtml += `<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.9em;">
+        <button onclick="changerPage(-1)" ${vCurrentPage === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="cursor: pointer;"'}>Précédent</button>
+        <span>Page ${vCurrentPage} / ${vTotalPages}</span>
+        <button onclick="changerPage(1)" ${vCurrentPage >= vTotalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="cursor: pointer;"'}>Suivant</button>
+    </div>`;
+    
+    vContainer.innerHTML = vHtml;
+}
+
+function changerPage(pDirection) {
+    const vTotalPages = Math.ceil(vAllMovies.length / vItemsPerPage);
+    vCurrentPage += pDirection;
+    if (vCurrentPage < 1) vCurrentPage = 1;
+    if (vCurrentPage > vTotalPages) vCurrentPage = vTotalPages;
+    afficherPageCourante();
 }
 
 
