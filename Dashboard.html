@@ -770,7 +770,7 @@ let vAffiliates = { AAA: null, AA: null };
 
 async function getAffiliates(pParentId) {
     try {
-        const vUrl = `https://statsapi.mlb.com/api/v1/teams?parentOrgId=${pParentId}`;
+        const vUrl = `https://statsapi.mlb.com/api/v1/teams?sportIds=11,12`;
         const vResponse = await fetch(vUrl);
         const vData = await vResponse.json();
         
@@ -778,15 +778,20 @@ async function getAffiliates(pParentId) {
         let vAaId = null;
         
         if (vData.teams) {
-            const vAaaTeam = vData.teams.find(t => t.sport && t.sport.id === 11);
+            // Validation explicite du parentOrgId en JS
+            const vAaaTeam = vData.teams.find(t => 
+                t.sport && t.sport.id === 11 && String(t.parentOrgId) === String(pParentId)
+            );
             if (vAaaTeam) vAaaId = vAaaTeam.id;
             
-            const vAaTeam = vData.teams.find(t => t.sport && t.sport.id === 12);
+            const vAaTeam = vData.teams.find(t => 
+                t.sport && t.sport.id === 12 && String(t.parentOrgId) === String(pParentId)
+            );
             if (vAaTeam) vAaId = vAaTeam.id;
         }
         return { AAA: vAaaId, AA: vAaId };
-    } catch (e) {
-        console.error("Erreur getAffiliates", e);
+    } catch (vErreur) {
+        console.error("Erreur getAffiliates", vErreur);
         return { AAA: null, AA: null };
     }
 }
