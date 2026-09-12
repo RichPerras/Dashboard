@@ -220,20 +220,33 @@ body.pipboy .forecast-time { color: var(--text-color); }
     </div>
 </div>
 <div class="card">
-    <div class="city-header" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">
-        <h2 id="titleMedia" data-i18n="gameReleases">🎮 Sorties jeux vidéo</h2>
+    <div class="city-header" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">
+        <h2 id="titleMedia" data-i18n="gameReleases" style="margin: 0;">🎮 Sorties jeux vidéo</h2>
+        
+        <!-- Sélecteur de console placé directement après le titre -->
+        <select id="selConsole" onchange="filtrerJeuxParConsole(this.value)" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color, #ccc); background-color: var(--input-bg, #fff); color: var(--text-color, #000);">
+            <option value="">Toutes les consoles</option>
+            <option value="7">Nintendo Switch</option>
+            <option value="187">PlayStation 5</option>
+            <option value="18">PlayStation 4</option>
+            <option value="186">Xbox Series X/S</option>
+            <option value="4">PC</option>
+        </select>
+
         <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto;">
-            <button id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">Jeux</button>
-            <button id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinéma</button>
-            <button id="btnMediaNetflix" class="btn-level" onclick="changerMedia('Netflix')">Netflix</button>
-            <button id="btnMediaDisney" class="btn-level" onclick="changerMedia('Disney')">Disney+</button>
-            <button id="btnMediaCrave" class="btn-level" onclick="changerMedia('Crave')">Crave</button>
+            <button type="button" id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">Jeux</button>
+            <button type="button" id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinéma</button>
+            <button type="button" id="btnMediaNetflix" class="btn-level" onclick="changerMedia('Netflix')">Netflix</button>
+            <button type="button" id="btnMediaDisney" class="btn-level" onclick="changerMedia('Disney')">Disney+</button>
+            <button type="button" id="btnMediaCrave" class="btn-level" onclick="changerMedia('Crave')">Crave</button>
         </div>
     </div>
+
     <div id="divMoisContainer" style="margin-bottom: 12px;">
         <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
         <input type="month" id="inputMois" onchange="rechargerMedia()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--input-bg); color: var(--text-color); border-color: var(--border-color);">
     </div>
+
     <div id="divMonthlyGames">Chargement des sorties...</div>
 </div>
 
@@ -961,7 +974,11 @@ async function changerMedia(pType) {
     document.querySelectorAll('.btn-level').forEach(vBtn => vBtn.classList.remove('active'));
     const vActiveBtn = document.getElementById(`btnMedia${pType}`);
     if (vActiveBtn) vActiveBtn.classList.add('active');
-
+// Affichage conditionnel du filtre de consoles
+    const vSelConsole = document.getElementById('selConsole');
+    if (vSelConsole) {
+        vSelConsole.style.display = (pType === 'Games') ? 'inline-block' : 'none';
+    }
     // Mise à jour des titres (Nouveautés -> Tendances pour le streaming)
     const vTitleEl = document.getElementById('titleMedia');
     if (pType === 'Games') vTitleEl.innerText = t('gameReleases');
@@ -1207,13 +1224,101 @@ function changerPage(pDirection) {
     afficherPageCourante();
 }
 
+let vListeJeuxComplet = [];
+let vPaginationInfo = { hasPrev: false, hasNext: false, page: 1 };
 
+let vConsoleSelectionnee = ""; // ID de la plateforme RAWG (ex: "7", "187", etc.)
+
+let vApiKeyGlobal = ""; // Conserve la clé API pour la pagination
+
+
+function filtrerJeuxParConsole(pConsoleId) {
+    vConsoleSelectionnee = pConsoleId;
+    
+    // Récupérer le mois sélectionné si disponible
+    const vInputMois = document.getElementById('inputMois');
+    let vAnnee = null;
+    let vMois = null;
+
+    if (vInputMois && vInputMois.value) {
+        [vAnnee, vMois] = vInputMois.value.split('-');
+    }
+
+    // Relancer la recherche à la page 1 avec le filtre
+    chargerSortiesJeux(vApiKeyGlobal, vAnnee, vMois, 1);
+}
+
+function afficherSortiesJeux() {
+    const vContainer = document.getElementById('divMonthlyGames');
+    let vJeuxFiltres = vListeJeuxComplet;
+
+    if (vConsoleSelectionnee !== "ALL") {
+        const vFiltre = vConsoleSelectionnee.toLowerCase();
+
+        vJeuxFiltres = vListeJeuxComplet.filter(pJeu => {
+            if (!pJeu.platforms) return false;
+
+            return pJeu.platforms.some(pP => {
+                const vPlatform = pP.platform;
+                if (!vPlatform) return false;
+
+                const vSlug = (vPlatform.slug || "").toLowerCase();
+                const vName = (vPlatform.name || "").toLowerCase();
+
+                return vSlug.includes(vFiltre) || 
+                       vName.includes(vFiltre) || 
+                       vPlatform.id == vConsoleSelectionnee;
+            });
+        });
+    }
+
+    if (vJeuxFiltres.length === 0) {
+        vContainer.innerText = t('noGamesForConsole') || t('noReleases');
+        return;
+    }
+
+    let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
+
+    vJeuxFiltres.forEach(pJeu => {
+        const vDateSortie = pJeu.released || t('unknownDate');
+        const vPlateformes = pJeu.platforms 
+            ? pJeu.platforms.map(pP => pP.platform.name).join(', ') 
+            : 'N/A';
+        const vGameUrl = pJeu.slug ? `https://rawg.io/games/${pJeu.slug}` : '#';
+
+        vHtml += `<li style="margin-bottom: 8px;">
+            <strong><a href="${vGameUrl}" target="_blank" style="color: inherit; text-decoration: underline;">${pJeu.name}</a></strong> 
+            <span style="font-size: 0.85rem; opacity: 0.8;">(${vPlateformes})</span>
+            <br>
+            <small style="color: var(--title-color);">${t('release')} ${vDateSortie}</small>
+        </li>`;
+    });
+
+    vHtml += '</ul>';
+
+vHtml += `
+<div class="pagination-container" style="margin-top: 10px;">
+    <button type="button" class="btn-pagination" id="btnPagePrev" ${vHasPrev ? '' : 'disabled'} onclick="changerPageJeux(event, -1)">
+        ${t('prevPage')}
+    </button>
+    <span style="font-size: 0.85rem; font-weight: bold; margin: 0 8px;">Page ${pPage}</span>
+    <button type="button" class="btn-pagination" id="btnPageNext" ${vHasNext ? '' : 'disabled'} onclick="changerPageJeux(event, 1)">
+        ${t('nextPage')}
+    </button>
+</div>`;
+
+    vContainer.innerHTML = vHtml;
+}
 
 async function chargerSortiesJeux(pApiKey, pAnnee = null, pMois = null, pPage = 1) {
     const vContainer = document.getElementById('divMonthlyGames');
 
-    if (!pApiKey || pApiKey === 'VOTRE_CLE_API') {
-        vContainer.innerText = t('missingApiKey');
+    if (pApiKey) {
+        vApiKeyGlobal = pApiKey;
+    }
+
+    if (!vApiKeyGlobal || vApiKeyGlobal === 'VOTRE_CLE_API') {
+        vContainer.innerText = typeof t === 'function' ? t('missingApiKey') : 'Clé API manquante.';
         return;
     }
 
@@ -1223,15 +1328,17 @@ async function chargerSortiesJeux(pApiKey, pAnnee = null, pMois = null, pPage = 
     const vAnnee = pAnnee || vMaintenant.getFullYear();
     const vMois = pMois ? String(pMois).padStart(2, '0') : String(vMaintenant.getMonth() + 1).padStart(2, '0');
 
-    // Calcul du dernier jour du mois sélectionné
     const vDernierJour = new Date(vAnnee, parseInt(vMois, 10), 0).getDate();
-
     const vDateDebut = `${vAnnee}-${vMois}-01`;
     const vDateFin = `${vAnnee}-${vMois}-${vDernierJour}`;
 
-    const vUrl = `https://api.rawg.io/api/games?key=${pApiKey}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=5&page=${pPage}`;
+    let vUrl = `https://api.rawg.io/api/games?key=${vApiKeyGlobal}&dates=${vDateDebut},${vDateFin}&ordering=released&page_size=10&page=${pPage}`;
 
-    vContainer.innerText = t('loadingReleases');
+    if (vConsoleSelectionnee && vConsoleSelectionnee !== "") {
+        vUrl += `&platforms=${vConsoleSelectionnee}`;
+    }
+
+    vContainer.innerText = typeof t === 'function' ? t('loadingReleases') : 'Chargement...';
 
     try {
         const vResponse = await fetch(vUrl);
@@ -1242,59 +1349,71 @@ async function chargerSortiesJeux(pApiKey, pAnnee = null, pMois = null, pPage = 
         const vData = await vResponse.json();
 
         if (!vData.results || vData.results.length === 0) {
-            vContainer.innerText = t('noReleases');
+            vContainer.innerText = typeof t === 'function' ? t('noReleases') : 'Aucune sortie trouvée.';
             return;
         }
 
         let vHtml = '<ul style="padding-left: 15px; margin: 0;">';
 
         vData.results.forEach(pJeu => {
-            const vDateSortie = pJeu.released || t('unknownDate');
+            const vDateSortie = pJeu.released || (typeof t === 'function' ? t('unknownDate') : 'Date inconnue');
             const vPlateformes = pJeu.platforms 
                 ? pJeu.platforms.map(pP => pP.platform.name).join(', ') 
                 : 'N/A';
             const vGameUrl = pJeu.slug ? `https://rawg.io/games/${pJeu.slug}` : '#';
 
             vHtml += `<li style="margin-bottom: 8px;">
-                <strong><a href="${vGameUrl}" target="_blank" style="color: inherit; text-decoration: underline;">${pJeu.name}</a></strong> 
+                <strong><a href="${vGameUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">${pJeu.name}</a></strong> 
                 <span style="font-size: 0.85rem; opacity: 0.8;">(${vPlateformes})</span>
                 <br>
-                <small style="color: var(--title-color);">${t('release')} ${vDateSortie}</small>
+                <small style="color: var(--title-color);">${typeof t === 'function' ? t('release') : 'Sortie :'} ${vDateSortie}</small>
             </li>`;
         });
 
         vHtml += '</ul>';
 
-        // Ajout des boutons de pagination
         const vHasPrev = vData.previous !== null;
         const vHasNext = vData.next !== null;
 
+        // Note les type="button" explicites et le passage de l'événement (event)
         vHtml += `
-        <div class="pagination-container">
-            <button class="btn-pagination" id="btnPagePrev" ${vHasPrev ? '' : 'disabled'} onclick="changerPageJeux(-1)">
-                ${t('prevPage')}
+        <div class="pagination-container" style="margin-top: 10px;">
+            <button type="button" class="btn-pagination" id="btnPagePrev" ${vHasPrev ? '' : 'disabled'} onclick="changerPageJeux(event, -1)">
+                ${typeof t === 'function' ? t('prevPage') : 'Précédent'}
             </button>
-            <span style="font-size: 0.85rem; font-weight: bold;">Page ${pPage}</span>
-            <button class="btn-pagination" id="btnPageNext" ${vHasNext ? '' : 'disabled'} onclick="changerPageJeux(1)">
-                ${t('nextPage')}
+            <span style="font-size: 0.85rem; font-weight: bold; margin: 0 8px;">Page ${pPage}</span>
+            <button type="button" class="btn-pagination" id="btnPageNext" ${vHasNext ? '' : 'disabled'} onclick="changerPageJeux(event, 1)">
+                ${typeof t === 'function' ? t('nextPage') : 'Suivant'}
             </button>
         </div>`;
 
         vContainer.innerHTML = vHtml;
+
     } catch (vErreur) {
-        vContainer.innerText = `${t('releasesError')} (${vErreur.message}).`;
+        vContainer.innerText = `${typeof t === 'function' ? t('releasesError') : 'Erreur'} (${vErreur.message}).`;
         console.error(vErreur);
     }
 }
 
-function changerPageJeux(pDirection) {
-    const vInputMois = document.getElementById('inputMois');
-    if (vInputMois && vInputMois.value) {
-        const [vAnnee, vMois] = vInputMois.value.split('-');
-        chargerSortiesJeux(vApiKey, vAnnee, vMois, vPageJeux + pDirection);
+function changerPageJeux(pEvent, pDirection) {
+    // Empêche toute soumission de formulaire ou comportement par défaut
+    if (pEvent) {
+        if (typeof pEvent.preventDefault === 'function') pEvent.preventDefault();
+        if (typeof pEvent.stopPropagation === 'function') pEvent.stopPropagation();
     }
-}
 
+    const vInputMois = document.getElementById('inputMois');
+    let vAnnee = null;
+    let vMois = null;
+
+    if (vInputMois && vInputMois.value) {
+        const vParts = vInputMois.value.split('-');
+        vAnnee = vParts[0];
+        vMois = vParts[1];
+    }
+
+    chargerSortiesJeux(vApiKeyGlobal, vAnnee, vMois, vPageJeux + pDirection);
+}
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
     const vInputMois = document.getElementById('inputMois');
