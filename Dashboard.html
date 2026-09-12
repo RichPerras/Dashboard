@@ -13,21 +13,36 @@
     --text-shadow: none; --input-bg: #2a2a2a; --button-bg: #333;
 }
 /* Style du bouton de réduction */
+/* La flèche reste figée en haut à droite */
 .btn-toggle-card {
     background: none;
     border: none;
     color: inherit;
-    font-size: 1rem;
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 0 4px;
-    margin-left: 8px;
-    transition: transform 0.2s ease;
+    padding: 4px;
+    flex-shrink: 0; /* Empêche le bouton de rapetisser */
+    align-self: flex-start; /* Garde la flèche en haut si le titre prend 2 lignes */
 }
-
+/* Alignement strict de la ligne supérieure de la carte */
+.card-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+}
 .card.collapsed .btn-toggle-card {
     transform: rotate(-90deg);
 }
-
+.card-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 8px;
+}
 .card.collapsed .card-content {
     display: none !important;
 }
