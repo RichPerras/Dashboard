@@ -155,15 +155,30 @@ body.pipboy .forecast-time { color: var(--text-color); }
 
 /* === ADAPTATION MOBILE (PORTRAIT) === */
 @media (max-width: 480px) {
-    .card-header-main h2 {
-        font-size: 1rem;
-        white-space: nowrap;
+    /* Masque tous les textes d'en-tête et de boutons sur mobile */
+    .text-label {
+        display: none !important;
     }
 
-    /* Réduction proportionnelle uniquement sur écran très étroit */
-    #txtVille { max-width: 110px; font-size: 0.85rem; }
-    #selConsole { max-width: 130px; font-size: 0.85rem; }
-    #selEquipeMlb { max-width: 170px; font-size: 0.85rem; }
+    /* Ajuste la taille des titres pour qu'ils ne prennent que la place de l'icône */
+    .card-header-main h2 {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+
+    /* Compaction des boutons d'action */
+    .btn-level {
+        padding: 4px 6px;
+        font-size: 0.9rem;
+        min-width: 32px;
+        text-align: center;
+    }
+
+    /* Réduit le sélecteur pour ne garder que l'essentiel */
+    #selConsole, #selEquipeMlb, #txtVille {
+        max-width: 100px;
+        font-size: 0.8rem;
+    }
 }
 
 .city-input, select {
@@ -233,7 +248,7 @@ body.pipboy .btn-pagination:disabled {
 </style>
 </head>
 <body>
-    
+<!-- BARRE SUPÉRIEURE : PIP-BOY & LANGUE -->
     <div class="top-bar">
         <div class="toggle-container">
             <span class="toggle-label">PIP-BOY</span>
@@ -255,8 +270,8 @@ body.pipboy .btn-pagination:disabled {
 
     <!-- CARTE : HEURE LOCALE -->
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 data-i18n="localTime" style="margin: 0;">🕒 Heure locale</h2>
+        <div class="card-header-main">
+            <h2 data-i18n="localTime">🕒<span class="text-label"> Heure locale</span></h2>
             <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
         </div>
         <div class="card-content">
@@ -266,9 +281,9 @@ body.pipboy .btn-pagination:disabled {
 
     <!-- CARTE : MÉTÉO -->
     <div class="card">
-        <div class="city-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <h2 data-i18n="weather" style="margin: 0;">🌤️ Météo :</h2>
+        <div class="card-header-main">
+            <div class="header-title-group">
+                <h2 data-i18n="weather">🌤️<span class="text-label"> Météo :</span></h2>
                 <input type="text" id="txtVille" class="city-input" value="Napierville" onchange="rechercherVille(this.value)">
                 <button type="button" class="btn-gps" onclick="obtenirGeolocalisation()" data-i18n-title="gpsTitle" title="Utiliser ma position GPS">📍</button>
             </div>
@@ -286,49 +301,87 @@ body.pipboy .btn-pagination:disabled {
 
     <!-- CARTE : MLB -->
     <div class="card">
-        <div class="city-header" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%;">
-            <h2 data-i18n="mlb" style="margin: 0;">⚾ MLB :</h2>
-            <select id="selEquipeMlb" class="city-input" style="flex: 1; min-width: 120px;" onchange="changerEquipeMlb(this.value)">
-                <option value="109">Arizona Diamondbacks</option>
-                <option value="144">Atlanta Braves</option>
-                <option value="110">Baltimore Orioles</option>
-                <option value="111">Boston Red Sox</option>
-                <option value="112">Chicago Cubs</option>
-                <option value="145">Chicago White Sox</option>
-                <option value="113">Cincinnati Reds</option>
-                <option value="114">Cleveland Guardians</option>
-                <option value="115">Colorado Rockies</option>
-                <option value="116">Detroit Tigers</option>
-                <option value="117">Houston Astros</option>
-                <option value="118">Kansas City Royals</option>
-                <option value="108">Los Angeles Angels</option>
-                <option value="119">Los Angeles Dodgers</option>
-                <option value="146">Miami Marlins</option>
-                <option value="158">Milwaukee Brewers</option>
-                <option value="142">Minnesota Twins</option>
-                <option value="121">New York Mets</option>
-                <option value="147">New York Yankees</option>
-                <option value="133">Oakland Athletics</option>
-                <option value="143">Philadelphia Phillies</option>
-                <option value="134">Pittsburgh Pirates</option>
-                <option value="135">San Diego Padres</option>
-                <option value="137">San Francisco Giants</option>
-                <option value="136">Seattle Mariners</option>
-                <option value="138">St. Louis Cardinals</option>
-                <option value="139">Tampa Bay Rays</option>
-                <option value="140">Texas Rangers</option>
-                <option value="141" selected>Toronto Blue Jays</option>
-                <option value="120">Washington Nationals</option>
-            </select>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; align-items: center;">
-                <button type="button" id="btnLevelMLB" class="btn-level active" onclick="changerLevel('MLB')">MLB</button>
-                <button type="button" id="btnLevelAAA" class="btn-level" onclick="changerLevel('AAA')">AAA</button>
-                <button type="button" id="btnLevelAA" class="btn-level" onclick="changerLevel('AA')">AA</button>
-                <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
+        <div class="card-header-main">
+            <div class="header-title-group">
+                <h2 data-i18n="mlb">⚾<span class="text-label"> MLB :</span></h2>
+                <select id="selEquipeMlb" class="city-input" onchange="changerEquipeMlb(this.value)">
+                    <option value="109">Arizona Diamondbacks</option>
+                    <option value="144">Atlanta Braves</option>
+                    <option value="110">Baltimore Orioles</option>
+                    <option value="111">Boston Red Sox</option>
+                    <option value="112">Chicago Cubs</option>
+                    <option value="145">Chicago White Sox</option>
+                    <option value="113">Cincinnati Reds</option>
+                    <option value="114">Cleveland Guardians</option>
+                    <option value="115">Colorado Rockies</option>
+                    <option value="116">Detroit Tigers</option>
+                    <option value="117">Houston Astros</option>
+                    <option value="118">Kansas City Royals</option>
+                    <option value="108">Los Angeles Angels</option>
+                    <option value="119">Los Angeles Dodgers</option>
+                    <option value="146">Miami Marlins</option>
+                    <option value="158">Milwaukee Brewers</option>
+                    <option value="142">Minnesota Twins</option>
+                    <option value="121">New York Mets</option>
+                    <option value="147">New York Yankees</option>
+                    <option value="133">Oakland Athletics</option>
+                    <option value="143">Philadelphia Phillies</option>
+                    <option value="134">Pittsburgh Pirates</option>
+                    <option value="135">San Diego Padres</option>
+                    <option value="137">San Francisco Giants</option>
+                    <option value="136">Seattle Mariners</option>
+                    <option value="138">St. Louis Cardinals</option>
+                    <option value="139">Tampa Bay Rays</option>
+                    <option value="140">Texas Rangers</option>
+                    <option value="141" selected>Toronto Blue Jays</option>
+                    <option value="120">Washington Nationals</option>
+                </select>
             </div>
+            <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
         </div>
+
+        <div class="card-controls">
+            <button type="button" id="btnLevelMLB" class="btn-level active" onclick="changerLevel('MLB')">MLB</button>
+            <button type="button" id="btnLevelAAA" class="btn-level" onclick="changerLevel('AAA')">AAA</button>
+            <button type="button" id="btnLevelAA" class="btn-level" onclick="changerLevel('AA')">AA</button>
+        </div>
+
         <div class="card-content">
             <div id="divJays">Chargement...</div>
+        </div>
+    </div>
+
+    <!-- CARTE : SORTIES MÉDIA / JEUX -->
+    <div class="card">
+        <div class="card-header-main">
+            <div class="header-title-group">
+                <h2 id="titleMedia" data-i18n="gameReleases">🎮<span class="text-label"> Sorties jeux vidéo</span></h2>
+                <select id="selConsole" onchange="filtrerJeuxParConsole(this.value)">
+                    <option value="">Toutes</option>
+                    <option value="7">Switch</option>
+                    <option value="187">PS5</option>
+                    <option value="18">PS4</option>
+                    <option value="186">Xbox</option>
+                    <option value="4">PC</option>
+                </select>
+            </div>
+            <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
+        </div>
+
+        <div class="card-controls">
+            <button type="button" id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">🎮<span class="text-label"> Jeux</span></button>
+            <button type="button" id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">🎬<span class="text-label"> Cinéma</span></button>
+            <button type="button" id="btnMediaNetflix" class="btn-level" onclick="changerMedia('Netflix')">🍿<span class="text-label"> Netflix</span></button>
+            <button type="button" id="btnMediaDisney" class="btn-level" onclick="changerMedia('Disney')">🏰<span class="text-label"> Disney+</span></button>
+            <button type="button" id="btnMediaCrave" class="btn-level" onclick="changerMedia('Crave')">📺<span class="text-label"> Crave</span></button>
+        </div>
+
+        <div class="card-content">
+            <div id="divMoisContainer" style="margin-bottom: 12px; margin-top: 10px;">
+                <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
+                <input type="month" id="inputMois" onchange="rechargerMedia()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color);">
+            </div>
+            <div id="divMonthlyGames">Chargement des sorties...</div>
         </div>
     </div>
 
@@ -338,45 +391,10 @@ body.pipboy .btn-pagination:disabled {
             <button type="button" onclick="fermerModalMedia()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit;">✖</button>
             <h3 id="modalMediaTitre" style="margin-top: 0;"></h3>
             <p id="modalMediaOverview" style="font-size: 0.9rem; text-align: left; max-height: 150px; overflow-y: auto; margin: 15px 0;"></p>
-            
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <a id="btnOuvrirPlateforme" href="#" target="_blank" style="padding: 10px; background-color: #007bff; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;">Rechercher sur la plateforme</a>
                 <button type="button" onclick="copierTitreMedia()" style="padding: 8px; background: transparent; border: 1px solid #ccc; color: inherit; border-radius: 4px; cursor: pointer;">📋 Copier le titre</button>
             </div>
-        </div>
-    </div>
-
-    <!-- CARTE : SORTIES MÉDIA / JEUX -->
-    <div class="card">
-        <div class="city-header" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">
-            <h2 id="titleMedia" data-i18n="gameReleases" style="margin: 0;">🎮 Sorties jeux vidéo</h2>
-            
-            <select id="selConsole" onchange="filtrerJeuxParConsole(this.value)" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color, #ccc); background-color: var(--input-bg, #fff); color: var(--text-color, #000);">
-                <option value="">Toutes les consoles</option>
-                <option value="7">Nintendo Switch</option>
-                <option value="187">PlayStation 5</option>
-                <option value="18">PlayStation 4</option>
-                <option value="186">Xbox Series X/S</option>
-                <option value="4">PC</option>
-            </select>
-
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; align-items: center;">
-                <button type="button" id="btnMediaGames" class="btn-level active" onclick="changerMedia('Games')">Jeux</button>
-                <button type="button" id="btnMediaCinema" class="btn-level" onclick="changerMedia('Cinema')">Cinéma</button>
-                <button type="button" id="btnMediaNetflix" class="btn-level" onclick="changerMedia('Netflix')">Netflix</button>
-                <button type="button" id="btnMediaDisney" class="btn-level" onclick="changerMedia('Disney')">Disney+</button>
-                <button type="button" id="btnMediaCrave" class="btn-level" onclick="changerMedia('Crave')">Crave</button>
-                <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
-            </div>
-        </div>
-
-        <div class="card-content">
-            <div id="divMoisContainer" style="margin-bottom: 12px;">
-                <label for="inputMois" style="font-size: 0.9rem;" data-i18n="chooseMonth">Choisir le mois : </label>
-                <input type="month" id="inputMois" onchange="rechargerMedia()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--input-bg); color: var(--text-color); border-color: var(--border-color);">
-            </div>
-
-            <div id="divMonthlyGames">Chargement des sorties...</div>
         </div>
     </div>
 
