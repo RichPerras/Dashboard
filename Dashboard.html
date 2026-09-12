@@ -250,26 +250,29 @@ body.pipboy .btn-pagination:disabled {
 <body>
 <!-- BARRE SUPÉRIEURE : PIP-BOY & LANGUE -->
     <div class="top-bar">
-        <div class="toggle-container">
-            <span class="toggle-label">PIP-BOY</span>
-            <label class="switch">
-                <input type="checkbox" id="chkPipboy" onchange="toggleTheme(this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="toggle-container language-toggle">
-            <span class="toggle-label">FR</span>
-            <label class="switch">
-                <input type="checkbox" id="chkLangue" onchange="toggleLanguage(this.checked)">
-                <span class="slider"></span>
-            </label>
-            <span class="toggle-label">EN</span>
-        </div>
+    <div class="toggle-container">
+        <span class="toggle-label">PIP-BOY</span>
+        <label class="switch">
+            <input type="checkbox" id="chkPipboy" onchange="toggleTheme(this.checked)">
+            <span class="slider"></span>
+        </label>
     </div>
 
+    <div class="toggle-container language-toggle">
+        <span class="toggle-label">FR</span>
+        <label class="switch">
+            <input type="checkbox" id="chkLangue" onchange="toggleLanguage(this.checked)">
+            <span class="slider"></span>
+        </label>
+        <span class="toggle-label">EN</span>
+    </div>
+</div>
+
+<!-- CONTENEUR OBLIGATOIRE POUR LA SAUVEGARDE ET LE DRAG & DROP -->
+<div id="dashboard-container">
+
     <!-- CARTE : HEURE LOCALE -->
-    <div class="card">
+    <div class="card" id="card-heure" draggable="true">
         <div class="card-header-main">
             <h2 data-i18n="localTime">🕒<span class="text-label"> Heure locale</span></h2>
             <button type="button" class="btn-toggle-card" onclick="toggleCard(this)">▼</button>
@@ -280,7 +283,7 @@ body.pipboy .btn-pagination:disabled {
     </div>
 
     <!-- CARTE : MÉTÉO -->
-    <div class="card">
+    <div class="card" id="card-meteo" draggable="true">
         <div class="card-header-main">
             <div class="header-title-group">
                 <h2 data-i18n="weather">🌤️<span class="text-label"> Météo :</span></h2>
@@ -300,7 +303,7 @@ body.pipboy .btn-pagination:disabled {
     </div>
 
     <!-- CARTE : MLB -->
-    <div class="card">
+    <div class="card" id="card-mlb" draggable="true">
         <div class="card-header-main">
             <div class="header-title-group">
                 <h2 data-i18n="mlb">⚾<span class="text-label"> MLB :</span></h2>
@@ -352,7 +355,7 @@ body.pipboy .btn-pagination:disabled {
     </div>
 
     <!-- CARTE : SORTIES MÉDIA / JEUX -->
-    <div class="card">
+    <div class="card" id="card-media" draggable="true">
         <div class="card-header-main">
             <div class="header-title-group">
                 <h2 id="titleMedia" data-i18n="gameReleases">🎮<span class="text-label"> Sorties jeux vidéo</span></h2>
@@ -385,18 +388,20 @@ body.pipboy .btn-pagination:disabled {
         </div>
     </div>
 
-    <!-- MODAL DE DÉTAILS -->
-    <div id="modalMedia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
-        <div style="background: var(--card-bg, #fff); color: var(--text-color, #000); padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; text-align: center; position: relative;">
-            <button type="button" onclick="fermerModalMedia()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit;">✖</button>
-            <h3 id="modalMediaTitre" style="margin-top: 0;"></h3>
-            <p id="modalMediaOverview" style="font-size: 0.9rem; text-align: left; max-height: 150px; overflow-y: auto; margin: 15px 0;"></p>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <a id="btnOuvrirPlateforme" href="#" target="_blank" style="padding: 10px; background-color: #007bff; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;">Rechercher sur la plateforme</a>
-                <button type="button" onclick="copierTitreMedia()" style="padding: 8px; background: transparent; border: 1px solid #ccc; color: inherit; border-radius: 4px; cursor: pointer;">📋 Copier le titre</button>
-            </div>
+</div> <!-- FIN DE DASHBOARD-CONTAINER -->
+
+<!-- MODAL DE DÉTAILS -->
+<div id="modalMedia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: var(--card-bg, #fff); color: var(--text-color, #000); padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; text-align: center; position: relative;">
+        <button type="button" onclick="fermerModalMedia()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit;">✖</button>
+        <h3 id="modalMediaTitre" style="margin-top: 0;"></h3>
+        <p id="modalMediaOverview" style="font-size: 0.9rem; text-align: left; max-height: 150px; overflow-y: auto; margin: 15px 0;"></p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a id="btnOuvrirPlateforme" href="#" target="_blank" style="padding: 10px; background-color: #007bff; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;">Rechercher sur la plateforme</a>
+            <button type="button" onclick="copierTitreMedia()" style="padding: 8px; background: transparent; border: 1px solid #ccc; color: inherit; border-radius: 4px; cursor: pointer;">📋 Copier le titre</button>
         </div>
     </div>
+</div>
 
     <script>
         const vTraductions = {
@@ -468,55 +473,113 @@ body.pipboy .btn-pagination:disabled {
                 chargerSortiesJeux(vApiKey, vAnnee, vMoisChoisi, vPageJeux);
             }
         }
-// --- 1. Gestion de la réduction des cartes ---
-function toggleCard(pBtn) {
-    const vCard = pBtn.closest('.card');
-    if (vCard) {
-        vCard.classList.toggle('collapsed');
+function sauvegarderPreferences() {
+    const vCartes = document.querySelectorAll('#dashboard-container .card');
+    const vOrdre = [];
+    const vEtats = {};
+
+    vCartes.forEach(pCarte => {
+        const vId = pCarte.id;
+        if (vId) {
+            vOrdre.push(vId);
+            const vContenu = pCarte.querySelector('.card-content');
+            vEtats[vId] = vContenu ? (vContenu.style.display === 'none') : false;
+        }
+    });
+
+    localStorage.setItem('dashboard_ordre', JSON.stringify(vOrdre));
+    localStorage.setItem('dashboard_etats', JSON.stringify(vEtats));
+}
+function chargerPreferences() {
+    const vOrdreStocke = localStorage.getItem('dashboard_ordre');
+    const vEtatsStockes = localStorage.getItem('dashboard_etats');
+    const vConteneur = document.getElementById('dashboard-container');
+
+    // 1. Réordonner dans le conteneur
+    if (vOrdreStocke && vConteneur) {
+        const vOrdre = JSON.parse(vOrdreStocke);
+        vOrdre.forEach(pId => {
+            const vCarte = document.getElementById(pId);
+            if (vCarte) {
+                vConteneur.appendChild(vCarte);
+            }
+        });
+    }
+
+    // 2. Appliquer les états ouvert/fermé
+    if (vEtatsStockes) {
+        const vEtats = JSON.parse(vEtatsStockes);
+        Object.keys(vEtats).forEach(pId => {
+            const vCarte = document.getElementById(pId);
+            if (vCarte) {
+                const vContenu = vCarte.querySelector('.card-content');
+                const vBouton = vCarte.querySelector('.btn-toggle-card');
+                const vEstPliee = vEtats[pId];
+
+                if (vContenu && vBouton) {
+                    vContenu.style.display = vEstPliee ? 'none' : 'block';
+                    vBouton.innerText = vEstPliee ? '▲' : '▼';
+                }
+            }
+        });
     }
 }
+        // --- 1. Gestion de la réduction des cartes ---
+function toggleCard(pBouton) {
+    const vCarte = pBouton.closest('.card');
+    const vContenu = vCarte.querySelector('.card-content');
 
-// --- 2. Gestion du Drag & Drop ---
-document.addEventListener('DOMContentLoaded', () => {
-    initialiserDragAndDrop();
-});
+    if (vContenu.style.display === 'none') {
+        vContenu.style.display = 'block';
+        pBouton.innerText = '▼';
+    } else {
+        vContenu.style.display = 'none';
+        pBouton.innerText = '▲';
+    }
+
+    sauvegarderPreferences();
+}
 
 function initialiserDragAndDrop() {
-    const vCards = document.querySelectorAll('.card');
-    const vContainer = document.body; // Ajuster si vos cartes sont dans un conteneur spécifique
+    const vConteneur = document.getElementById('dashboard-container') || document.body;
+    const vCartes = vConteneur.querySelectorAll('.card');
 
-    vCards.forEach(vCard => {
-        vCard.setAttribute('draggable', 'true');
+    vCartes.forEach(pCarte => {
+        pCarte.setAttribute('draggable', 'true');
 
-        vCard.addEventListener('dragstart', (pEvent) => {
-            // Empêche le drag si l'utilisateur clique sur un champ de texte, bouton ou select
+        pCarte.addEventListener('dragstart', (pEvent) => {
             const vTargetTag = pEvent.target.tagName;
             if (['INPUT', 'SELECT', 'BUTTON', 'A', 'LABEL'].includes(vTargetTag)) {
                 pEvent.preventDefault();
                 return;
             }
-            vCard.classList.add('dragging');
+            pCarte.classList.add('dragging');
         });
 
-        vCard.addEventListener('dragend', () => {
-            vCard.classList.remove('dragging');
-            sauvegarderOrdreCartes(); // Optionnel : pour conserver la position
+        pCarte.addEventListener('dragend', () => {
+            pCarte.classList.remove('dragging');
+            sauvegarderPreferences(); // Correction de la fonction de sauvegarde
         });
     });
 
-    vContainer.addEventListener('dragover', (pEvent) => {
+    vConteneur.addEventListener('dragover', (pEvent) => {
         pEvent.preventDefault();
         const vDraggingCard = document.querySelector('.card.dragging');
         if (!vDraggingCard) return;
 
-        const vAfterElement = obtenirElementApres(vContainer, pEvent.clientY);
+        const vAfterElement = obtenirElementApres(vConteneur, pEvent.clientY);
         if (vAfterElement == null) {
-            vContainer.appendChild(vDraggingCard);
+            vConteneur.appendChild(vDraggingCard);
         } else {
-            vContainer.insertBefore(vDraggingCard, vAfterElement);
+            vConteneur.insertBefore(vDraggingCard, vAfterElement);
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    chargerPreferences();
+    initialiserDragAndDrop();
+});
 
 function obtenirElementApres(pContainer, pY) {
     const vElements = [...pContainer.querySelectorAll('.card:not(.dragging)')];
@@ -532,6 +595,15 @@ function obtenirElementApres(pContainer, pY) {
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    chargerPreferences();
+    if (typeof appliquerTraductions === 'function') {
+        appliquerTraductions();
+    }
+    initialiserDragAndDrop();
+});
+
         appliquerTraductions();
 
         // Variables globales pour le fuseau horaire de la ville
